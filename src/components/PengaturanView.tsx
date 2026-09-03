@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { SchoolProfile, SuratMasuk, SuratKeluar, DataPengguna, MasterKlasifikasi, MasterKelas } from '../types';
+import {
+  SchoolProfile,
+  SuratMasuk,
+  SuratKeluar,
+  DataPengguna,
+  MasterKlasifikasi,
+  MasterKelas,
+  KelasDiampu,
+} from '../types';
 import { LOGO_URL } from './Sidebar';
 import {
   getDriveAuthStatus,
@@ -23,6 +31,7 @@ interface PengaturanViewProps {
   penggunaList?: DataPengguna[];
   klasifikasiList?: MasterKlasifikasi[];
   kelasList?: MasterKelas[];
+  kelasDiampuList?: KelasDiampu[];
   totalSuratMasuk?: number;
   totalSuratKeluar?: number;
 }
@@ -35,6 +44,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   penggunaList = [],
   klasifikasiList = [],
   kelasList = [],
+  kelasDiampuList = [],
   totalSuratMasuk = 0,
   totalSuratKeluar = 0,
 }) => {
@@ -107,7 +117,8 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
         penggunaList,
         klasifikasiList,
         formData,
-        kelasList
+        kelasList,
+        kelasDiampuList
       );
       setSyncSummary(res);
       setTimeout(() => setSyncSummary(null), 6000);
@@ -239,6 +250,32 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
         { name: 'jumlahPerempuan', type: 'number (opsional)', desc: 'Jumlah peserta didik perempuan' },
         { name: 'ruangan', type: 'string', desc: 'Lokasi ruang gedung kelas' },
         { name: 'faseKurikulum', type: 'string (Fase A | B | C)', desc: 'Fase Kurikulum Merdeka' },
+      ],
+    },
+    {
+      id: COLLECTIONS.KELAS_DIAMPU,
+      name: 'kelas_diampu',
+      title: 'Koleksi Database Kelas yang Diampu',
+      docIdPattern: '{id} (contoh: kd-001, kd-002)',
+      count: kelasDiampuList.length,
+      icon: 'assignment_ind',
+      color: 'text-[#006a61] bg-[#86f2e4]/20 border-[#006a61]/30',
+      description: 'Menyimpan relasi penugasan beban mengajar guru (nama guru, NIP, rombel kelas, mata pelajaran, alokasi JP, dan jadwal).',
+      fields: [
+        { name: 'id', type: 'string', desc: 'ID unik penugasan diampu' },
+        { name: 'guruId', type: 'string (opsional)', desc: 'ID referensi ke data guru/pegawai' },
+        { name: 'namaGuru', type: 'string', desc: 'Nama lengkap guru pengampu' },
+        { name: 'nipGuru', type: 'string', desc: 'NIP / NUPTK guru pengampu' },
+        { name: 'mataPelajaran', type: 'string', desc: 'Mata pelajaran yang diajarkan' },
+        { name: 'kelasId', type: 'string (opsional)', desc: 'ID referensi ke rombel kelas' },
+        { name: 'namaKelas', type: 'string', desc: 'Nama rombel (contoh: Kelas 1A)' },
+        { name: 'tingkat', type: 'number (1-6)', desc: 'Tingkat jenjang kelas' },
+        { name: 'tahunAjaran', type: 'string', desc: 'Tahun pelajaran (2023/2024)' },
+        { name: 'semester', type: 'string', desc: 'Semester ganjil/genap' },
+        { name: 'jumlahJamPerMinggu', type: 'number', desc: 'Alokasi jam pelajaran (JP/minggu)' },
+        { name: 'hariJadwal', type: 'string (opsional)', desc: 'Hari dan jam pelajaran' },
+        { name: 'ruangan', type: 'string (opsional)', desc: 'Lokasi ruang belajar' },
+        { name: 'status', type: 'enum (Aktif | Nonaktif)', desc: 'Status keaktifan penugasan' },
       ],
     },
     {

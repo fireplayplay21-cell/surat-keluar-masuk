@@ -13,7 +13,15 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
-import { SuratMasuk, SuratKeluar, DataPengguna, MasterKlasifikasi, MasterKelas, SchoolProfile } from '../types';
+import {
+  SuratMasuk,
+  SuratKeluar,
+  DataPengguna,
+  MasterKlasifikasi,
+  MasterKelas,
+  KelasDiampu,
+  SchoolProfile,
+} from '../types';
 
 // Named database id from AI Studio environment or config
 export const FIRESTORE_DATABASE_ID =
@@ -100,6 +108,7 @@ export const COLLECTIONS = {
   PENGGUNA: 'pengguna',
   MASTER_KLASIFIKASI: 'master_klasifikasi',
   KELAS: 'kelas',
+  KELAS_DIAMPU: 'kelas_diampu',
   SCHOOL_PROFILE: 'school_profile',
 } as const;
 
@@ -248,6 +257,28 @@ export async function deleteKelasFromFirestore(id: string): Promise<void> {
 }
 
 // -------------------------------------------------------------
+// DATABASE KELAS YANG DIAMPU (PEMBAGIAN TUGAS MENGAJAR) CRUD
+// -------------------------------------------------------------
+export async function saveKelasDiampuToFirestore(item: KelasDiampu): Promise<void> {
+  const path = `${COLLECTIONS.KELAS_DIAMPU}/${item.id}`;
+  try {
+    const docRef = doc(db, COLLECTIONS.KELAS_DIAMPU, item.id);
+    await setDoc(docRef, sanitizeDoc(item), { merge: true });
+  } catch (error) {
+    throw handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteKelasDiampuFromFirestore(id: string): Promise<void> {
+  const path = `${COLLECTIONS.KELAS_DIAMPU}/${id}`;
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.KELAS_DIAMPU, id));
+  } catch (error) {
+    throw handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+// -------------------------------------------------------------
 // INITIAL SEEDING HELPER
 // -------------------------------------------------------------
 export async function seedInitialDataIfEmpty(
@@ -256,7 +287,8 @@ export async function seedInitialDataIfEmpty(
   initialPengguna: DataPengguna[],
   initialKlasifikasi: MasterKlasifikasi[],
   initialProfile: SchoolProfile,
-  initialKelas?: MasterKelas[]
+  initialKelas?: MasterKelas[],
+  initialKelasDiampu?: KelasDiampu[]
 ): Promise<boolean> {
   try {
     const snap = await getDocs(collection(db, COLLECTIONS.SURAT_MASUK));
@@ -271,6 +303,18 @@ export async function seedInitialDataIfEmpty(
           });
           await batch.commit();
           console.log('Seeding initial kelas data to Firestore completed.');
+        }
+      }
+      // Check if kelas_diampu collection is empty and needs initial seeding
+      if (initialKelasDiampu && initialKelasDiampu.length > 0) {
+        const diampuSnap = await getDocs(collection(db, COLLECTIONS.KELAS_DIAMPU));
+        if (diampuSnap.empty) {
+          const batch = writeBatch(db);
+          initialKelasDiampu.forEach((kd) => {
+            batch.set(doc(db, COLLECTIONS.KELAS_DIAMPU, kd.id), sanitizeDoc(kd));
+          });
+          await batch.commit();
+          console.log('Seeding initial kelas_diampu data to Firestore completed.');
         }
       }
       return false; // already has main data
@@ -296,6 +340,11 @@ export async function seedInitialDataIfEmpty(
         batch.set(doc(db, COLLECTIONS.KELAS, kls.id), sanitizeDoc(kls));
       });
     }
+    if (initialKelasDiampu && initialKelasDiampu.length > 0) {
+      initialKelasDiampu.forEach((kd) => {
+        batch.set(doc(db, COLLECTIONS.KELAS_DIAMPU, kd.id), sanitizeDoc(kd));
+      });
+    }
     batch.set(doc(db, COLLECTIONS.SCHOOL_PROFILE, 'main_profile'), sanitizeDoc(initialProfile));
 
     await batch.commit();
@@ -316,6 +365,7 @@ export interface FirestoreSyncSummary {
   penggunaCount: number;
   klasifikasiCount: number;
   kelasCount: number;
+  kelasDiampuCount: number;
   schoolProfileSynced: boolean;
   syncedAt: string;
 }
@@ -326,7 +376,8 @@ export async function forceSyncAllCollectionsToFirestore(
   penggunaList: DataPengguna[],
   klasifikasiList: MasterKlasifikasi[],
   schoolProfile: SchoolProfile,
-  kelasList?: MasterKelas[]
+  kelasList?: MasterKelas[],
+  kelasDiampuList?: KelasDiampu[]
 ): Promise<FirestoreSyncSummary> {
   const batch = writeBatch(db);
 
@@ -362,6 +413,12 @@ export async function forceSyncAllCollectionsToFirestore(
     });
   }
 
+  if (kelasDiampuList && kelasDiampuList.length > 0) {
+    kelasDiampuList.forEach((kd) => {
+      batch.set(doc(db, COLLECTIONS.KELAS_DIAMPU, kd.id), sanitizeDoc(kd), { merge: true });
+    });
+  }
+
   batch.set(doc(db, COLLECTIONS.SCHOOL_PROFILE, 'main_profile'), sanitizeDoc(schoolProfile), { merge: true });
 
   await batch.commit();
@@ -372,6 +429,7 @@ export async function forceSyncAllCollectionsToFirestore(
     penggunaCount: penggunaList.length,
     klasifikasiCount: klasifikasiList.length,
     kelasCount: kelasList?.length || 0,
+    kelasDiampuCount: kelasDiampuList?.length || 0,
     schoolProfileSynced: true,
     syncedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   };

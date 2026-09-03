@@ -245,6 +245,8 @@ export function syncAuthUsersWithPegawai(
       roleLabel,
       jabatan: pegawai.jabatan || '-',
       kelas: pegawai.kelas || '-',
+      kelasDiampu: pegawai.kelasDiampu || (pegawai.kelas && pegawai.kelas !== '-' ? [pegawai.kelas] : []),
+      mataPelajaranUtama: pegawai.mataPelajaranUtama,
       email: pegawai.email || '',
       telepon: pegawai.telepon || '-',
       fotoInitials: getFotoInitials(pegawai.nama),

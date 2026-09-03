@@ -129,6 +129,29 @@
         "keterangan": { "type": "string" }
       },
       "required": ["namaKelas", "tingkat", "waliKelas", "tahunAjaran", "jumlahSiswa", "ruangan"]
+    },
+    "kelas_diampu": {
+      "title": "Database Kelas yang Diampu",
+      "description": "Informasi penugasan mengajar guru, mata pelajaran yang diampu, kelas/rombel yang diajar, beban jam pelajaran (JP) per minggu, dan jadwal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "guruId": { "type": "string" },
+        "namaGuru": { "type": "string" },
+        "nipGuru": { "type": "string" },
+        "mataPelajaran": { "type": "string" },
+        "kelasId": { "type": "string" },
+        "namaKelas": { "type": "string" },
+        "tingkat": { "type": "number" },
+        "tahunAjaran": { "type": "string" },
+        "semester": { "type": "string" },
+        "jumlahJamPerMinggu": { "type": "number" },
+        "hariJadwal": { "type": "string" },
+        "ruangan": { "type": "string" },
+        "status": { "type": "string", "enum": ["Aktif", "Nonaktif"] },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["namaGuru", "mataPelajaran", "namaKelas", "jumlahJamPerMinggu", "status"]
     }
   }
 }

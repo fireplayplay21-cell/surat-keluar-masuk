@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { DataPengguna, AppUser } from '../types';
+import { DataPengguna, AppUser, KelasDiampu } from '../types';
 import { ResponsiveTableWrapper } from './ResponsiveTableWrapper';
 
 interface DataPenggunaViewProps {
   penggunaList: DataPengguna[];
+  kelasDiampuList?: KelasDiampu[];
   searchQuery: string;
   onAddNew: () => void;
   onViewDetail: (pengguna: DataPengguna) => void;
@@ -14,6 +15,7 @@ interface DataPenggunaViewProps {
 
 export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
   penggunaList,
+  kelasDiampuList = [],
   searchQuery,
   onAddNew,
   onViewDetail,
@@ -427,20 +429,49 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Kelas */}
+                      {/* Kelas & Penugasan Mengajar */}
                       <td className="py-3.5 px-4">
-                        {isWaliKelas ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-[#86f2e4]/30 text-[#006f66] border border-[#006a61]/15">
-                            <span className="material-symbols-outlined text-[13px]">
-                              door_front
-                            </span>
-                            {item.kelas}
-                          </span>
-                        ) : (
-                          <span className="text-[#76777d] italic font-medium px-2">
-                            -
-                          </span>
-                        )}
+                        {(() => {
+                          const teacherAssignments = kelasDiampuList.filter(
+                            (kd) =>
+                              (kd.guruId && kd.guruId === item.id) ||
+                              (kd.nipGuru && kd.nipGuru !== '-' && kd.nipGuru === item.nip) ||
+                              kd.namaGuru.toLowerCase().includes(item.nama.toLowerCase()) ||
+                              item.nama.toLowerCase().includes(kd.namaGuru.toLowerCase())
+                          );
+                          const totalJP = teacherAssignments.reduce(
+                            (sum, a) => sum + (a.jumlahJamPerMinggu || 0),
+                            0
+                          );
+
+                          return (
+                            <div className="flex flex-col gap-1">
+                              {isWaliKelas ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-[#86f2e4]/30 text-[#006f66] border border-[#006a61]/15 w-fit">
+                                  <span className="material-symbols-outlined text-[13px]">
+                                    door_front
+                                  </span>
+                                  {item.kelas}
+                                </span>
+                              ) : (
+                                <span className="text-[#76777d] italic font-medium text-xs">
+                                  Bukan Wali Kelas
+                                </span>
+                              )}
+
+                              {teacherAssignments.length > 0 ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-[#006a61] font-semibold">
+                                  <span className="material-symbols-outlined text-[13px]">menu_book</span>
+                                  {teacherAssignments.length} rombel · {totalJP} JP
+                                </span>
+                              ) : item.mataPelajaranUtama ? (
+                                <span className="text-[10px] text-[#76777d]">
+                                  {item.mataPelajaranUtama}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Jabatan */}

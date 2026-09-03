@@ -13,6 +13,7 @@ import {
   MasterInstansi,
   MasterPejabat,
   MasterKelas,
+  KelasDiampu,
   SchoolProfile,
   StatusSuratMasuk,
   DataPengguna,
@@ -25,6 +26,7 @@ import {
   INITIAL_INSTANSI,
   INITIAL_PEJABAT,
   INITIAL_KELAS,
+  INITIAL_KELAS_DIAMPU,
   INITIAL_SCHOOL_PROFILE,
   INITIAL_PENGGUNA,
 } from './data/initialData';
@@ -41,6 +43,8 @@ import {
   saveKlasifikasiToFirestore,
   saveKelasToFirestore,
   deleteKelasFromFirestore,
+  saveKelasDiampuToFirestore,
+  deleteKelasDiampuFromFirestore,
   saveSchoolProfileToFirestore,
   seedInitialDataIfEmpty,
 } from './services/firebase';
@@ -112,6 +116,11 @@ export default function App() {
   const [kelasList, setKelasList] = useState<MasterKelas[]>(() => {
     const saved = localStorage.getItem('sdn01_kelas');
     return saved ? JSON.parse(saved) : INITIAL_KELAS;
+  });
+
+  const [kelasDiampuList, setKelasDiampuList] = useState<KelasDiampu[]>(() => {
+    const saved = localStorage.getItem('sdn01_kelas_diampu');
+    return saved ? JSON.parse(saved) : INITIAL_KELAS_DIAMPU;
   });
 
   const [schoolProfile, setSchoolProfile] = useState<SchoolProfile>(() => {
@@ -209,6 +218,10 @@ export default function App() {
   }, [kelasList]);
 
   useEffect(() => {
+    localStorage.setItem('sdn01_kelas_diampu', JSON.stringify(kelasDiampuList));
+  }, [kelasDiampuList]);
+
+  useEffect(() => {
     localStorage.setItem('sdn01_profile', JSON.stringify(schoolProfile));
   }, [schoolProfile]);
 
@@ -223,7 +236,8 @@ export default function App() {
       INITIAL_PENGGUNA,
       INITIAL_KLASIFIKASI,
       INITIAL_SCHOOL_PROFILE,
-      INITIAL_KELAS
+      INITIAL_KELAS,
+      INITIAL_KELAS_DIAMPU
     ).catch((e) => {
       console.warn('Seeding check:', e);
     });
@@ -342,6 +356,23 @@ export default function App() {
       }
     );
 
+    // 7. Subscribe to Kelas Diampu
+    const unsubKelasDiampu = onSnapshot(
+      collection(db, COLLECTIONS.KELAS_DIAMPU),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: KelasDiampu[] = [];
+          snapshot.forEach((doc) => {
+            list.push({ ...doc.data(), id: doc.id } as KelasDiampu);
+          });
+          setKelasDiampuList(list);
+        }
+      },
+      (error) => {
+        console.warn('Firestore kelas_diampu listener notice:', error.message);
+      }
+    );
+
     return () => {
       unsubSuratMasuk();
       unsubSuratKeluar();
@@ -349,6 +380,7 @@ export default function App() {
       unsubKlasifikasi();
       unsubProfile();
       unsubKelas();
+      unsubKelasDiampu();
     };
   }, []);
 
@@ -629,6 +661,40 @@ export default function App() {
     }
   };
 
+  const handleAddKelasDiampu = async (item: Omit<KelasDiampu, 'id'>) => {
+    const fullItem: KelasDiampu = { ...item, id: `kd-${Date.now()}` };
+    setKelasDiampuList((prev) => [fullItem, ...prev]);
+    try {
+      await saveKelasDiampuToFirestore(fullItem);
+    } catch (err) {
+      console.warn('Saved kelas diampu locally:', err);
+    }
+  };
+
+  const handleUpdateKelasDiampu = async (id: string, item: Partial<KelasDiampu>) => {
+    setKelasDiampuList((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, ...item } : k))
+    );
+    const existing = kelasDiampuList.find((k) => k.id === id);
+    if (existing) {
+      const fullItem: KelasDiampu = { ...existing, ...item };
+      try {
+        await saveKelasDiampuToFirestore(fullItem);
+      } catch (err) {
+        console.warn('Updated kelas diampu locally:', err);
+      }
+    }
+  };
+
+  const handleDeleteKelasDiampu = async (id: string) => {
+    setKelasDiampuList((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteKelasDiampuFromFirestore(id);
+    } catch (err) {
+      console.warn('Deleted kelas diampu locally:', err);
+    }
+  };
+
   // -------------------------------------------------------------
   // DATA PENGGUNA HANDLERS
   // -------------------------------------------------------------
@@ -822,6 +888,7 @@ export default function App() {
         {activeTab === 'data-pengguna' && (
           <DataPenggunaView
             penggunaList={penggunaList}
+            kelasDiampuList={kelasDiampuList}
             searchQuery={searchQuery}
             currentUser={currentUser}
             onAddNew={() => {
@@ -846,7 +913,9 @@ export default function App() {
             instansiList={instansiList}
             pejabatList={pejabatList}
             kelasList={kelasList}
+            kelasDiampuList={kelasDiampuList}
             guruList={penggunaList}
+            schoolProfile={schoolProfile}
             onAddKlasifikasi={handleAddKlasifikasi}
             onDeleteKlasifikasi={handleDeleteKlasifikasi}
             onAddInstansi={handleAddInstansi}
@@ -856,6 +925,9 @@ export default function App() {
             onAddKelas={handleAddKelas}
             onUpdateKelas={handleUpdateKelas}
             onDeleteKelas={handleDeleteKelas}
+            onAddKelasDiampu={handleAddKelasDiampu}
+            onUpdateKelasDiampu={handleUpdateKelasDiampu}
+            onDeleteKelasDiampu={handleDeleteKelasDiampu}
           />
         )}
 
@@ -868,6 +940,7 @@ export default function App() {
             penggunaList={penggunaList}
             klasifikasiList={klasifikasiList}
             kelasList={kelasList}
+            kelasDiampuList={kelasDiampuList}
             totalSuratMasuk={suratMasukList.length}
             totalSuratKeluar={suratKeluarList.length}
           />
@@ -924,6 +997,7 @@ export default function App() {
           setDetailPengguna(null);
         }}
         pengguna={detailPengguna}
+        kelasDiampuList={kelasDiampuList}
         onEdit={(pengguna) => {
           setDetailPengguna(null);
           setIsModalDetailPenggunaOpen(false);

@@ -30,6 +30,10 @@ service cloud.firestore {
     match /kelas/{kelasId} {
       allow read, write: if true;
     }
+
+    match /kelas_diampu/{id} {
+      allow read, write: if true;
+    }
   }
 }
 

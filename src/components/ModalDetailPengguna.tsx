@@ -1,10 +1,11 @@
 import React from 'react';
-import { DataPengguna } from '../types';
+import { DataPengguna, KelasDiampu } from '../types';
 
 interface ModalDetailPenggunaProps {
   isOpen: boolean;
   onClose: () => void;
   pengguna: DataPengguna | null;
+  kelasDiampuList?: KelasDiampu[];
   onEdit: (pengguna: DataPengguna) => void;
 }
 
@@ -12,6 +13,7 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
   isOpen,
   onClose,
   pengguna,
+  kelasDiampuList = [],
   onEdit,
 }) => {
   if (!isOpen || !pengguna) return null;
@@ -26,9 +28,18 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
       .toUpperCase();
   };
 
+  // Find all kelas diampu by this teacher
+  const assignments = kelasDiampuList.filter(
+    (kd) =>
+      (kd.guruId && kd.guruId === pengguna.id) ||
+      (kd.nipGuru && kd.nipGuru !== '-' && kd.nipGuru === pengguna.nip) ||
+      kd.namaGuru.toLowerCase().includes(pengguna.nama.toLowerCase()) ||
+      pengguna.nama.toLowerCase().includes(kd.namaGuru.toLowerCase())
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-start pb-4 border-b border-[#eceef0]">
           <div className="flex items-center gap-3">
@@ -53,7 +64,7 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
         </div>
 
         {/* Content Details Grid */}
-        <div className="py-4 space-y-3 text-xs">
+        <div className="py-4 space-y-3 text-xs overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-3 bg-[#f7f9fb] p-3 rounded-lg border border-[#c6c6cd]/50">
             <div>
               <span className="text-[11px] font-bold text-[#45464d] uppercase block">
@@ -64,10 +75,10 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
 
             <div>
               <span className="text-[11px] font-bold text-[#45464d] uppercase block">
-                Kelas Diampu
+                Wali Kelas / Rombel
               </span>
               <span className="font-bold text-[#006f66] bg-[#86f2e4]/30 px-2 py-0.5 rounded inline-block">
-                {pengguna.kelas}
+                {pengguna.kelas || '-'}
               </span>
             </div>
 
@@ -113,6 +124,64 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
               </span>
               <span className="font-semibold text-black">SDN 01 Harapan</span>
             </div>
+          </div>
+
+          {/* Beban Mengajar & Kelas yang Diampu Section */}
+          <div className="border border-teal-200 bg-teal-50/40 p-3 rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-[#006f66] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[17px]">assignment_ind</span>
+                Database Kelas yang Diampu
+              </h4>
+              <span className="text-[11px] font-extrabold text-[#006a61] bg-white px-2 py-0.5 rounded border border-[#006a61]/20">
+                {assignments.length > 0
+                  ? `${assignments.reduce((sum, c) => sum + (c.jumlahJamPerMinggu || 0), 0)} JP / minggu`
+                  : `${pengguna.totalJamMengajar || 24} JP / minggu`}
+              </span>
+            </div>
+
+            {assignments.length > 0 ? (
+              <div className="space-y-1.5 pt-1">
+                {assignments.map((asg) => (
+                  <div
+                    key={asg.id}
+                    className="bg-white border border-[#c6c6cd]/60 rounded-md p-2 flex items-center justify-between shadow-2xs text-[11px]"
+                  >
+                    <div>
+                      <div className="font-bold text-black flex items-center gap-1.5">
+                        <span className="bg-[#006a61] text-white px-1.5 py-0.2 rounded font-extrabold text-[10px]">
+                          {asg.namaKelas}
+                        </span>
+                        <span>{asg.mataPelajaran}</span>
+                      </div>
+                      <div className="text-[10px] text-[#76777d] mt-0.5 flex items-center gap-2">
+                        <span>{asg.hariJadwal || 'Jadwal Rombel'}</span>
+                        <span>•</span>
+                        <span>{asg.ruangan || 'Ruang Kelas'}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-extrabold text-[#006a61] bg-[#86f2e4]/30 px-1.5 py-0.5 rounded text-[10px]">
+                        {asg.jumlahJamPerMinggu} JP
+                      </span>
+                      <div className="text-[9.5px] text-gray-500 mt-0.5">{asg.status}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white/80 border border-gray-200 rounded p-2 text-center text-gray-600">
+                <p className="font-semibold text-[11px]">
+                  Mata Pelajaran:{' '}
+                  <span className="text-black font-bold">
+                    {pengguna.mataPelajaranUtama || 'Tematik (Guru Kelas)'}
+                  </span>
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  Rombel Diampu: {pengguna.kelas || 'Belum diatur secara spesifik'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Contact Section */}

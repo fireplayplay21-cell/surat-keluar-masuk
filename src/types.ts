@@ -110,11 +110,32 @@ export interface MasterKelas {
   keterangan?: string;
 }
 
+export interface KelasDiampu {
+  id: string;
+  guruId: string; // ID pegawai dari tabel data pengguna
+  namaGuru: string;
+  nipGuru: string;
+  mataPelajaran: string; // Contoh: "Tematik / Guru Kelas", "Pendidikan Agama Islam (PAI)", "PJOK", "Bahasa Inggris", "Matematika", "SBdP", "IPAS"
+  kelasId: string; // ID rombel master kelas (misal: "kls-1a")
+  namaKelas: string; // Contoh: "Kelas 1A"
+  tingkat: number; // 1 - 6
+  tahunAjaran: string; // "2023/2024" atau "2024/2025"
+  semester: 'Ganjil' | 'Genap' | 'Sepanjang Tahun';
+  jumlahJamPerMinggu: number; // Beban JP per minggu (misal: 24, 4, 3, 2 JP)
+  hariJadwal?: string; // Hari dan jam mengajar, misal: "Senin 07:30 - 09:30"
+  ruangan?: string; // Ruang kelas atau lokasi belajar
+  status: 'Aktif' | 'Nonaktif';
+  keterangan?: string;
+}
+
 export interface DataPengguna {
   id: string;
   nama: string;
   nip: string;
   kelas: string;
+  kelasDiampu?: string[]; // Daftar nama rombel yang diampu, misal: ["Kelas 1A", "Kelas 1B"]
+  mataPelajaranUtama?: string; // Misal: "PJOK", "PAI", "Guru Kelas"
+  totalJamMengajar?: number; // Total jam tatap muka per minggu (JP)
   jabatan: string;
   statusKepegawaian: 'PNS' | 'PPPK' | 'GTT/Honorer' | 'PTY';
   jenisKelamin: 'L' | 'P';
@@ -181,6 +202,8 @@ export interface AppUser {
   roleLabel: string;
   jabatan: string;
   kelas?: string;
+  kelasDiampu?: string[];
+  mataPelajaranUtama?: string;
   email: string;
   telepon: string;
   fotoInitials: string;

@@ -1,13 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { MasterKlasifikasi, MasterInstansi, MasterPejabat, MasterKelas, DataPengguna } from '../types';
+import {
+  MasterKlasifikasi,
+  MasterInstansi,
+  MasterPejabat,
+  MasterKelas,
+  DataPengguna,
+  KelasDiampu,
+  SchoolProfile,
+} from '../types';
 import { ResponsiveTableWrapper } from './ResponsiveTableWrapper';
+import { KelasDiampuTab } from './KelasDiampuTab';
 
 interface MasterDataViewProps {
   klasifikasiList?: MasterKlasifikasi[];
   instansiList?: MasterInstansi[];
   pejabatList?: MasterPejabat[];
   kelasList?: MasterKelas[];
+  kelasDiampuList?: KelasDiampu[];
   guruList?: DataPengguna[];
+  schoolProfile?: SchoolProfile;
   onAddKlasifikasi?: (item: Omit<MasterKlasifikasi, 'id'>) => void;
   onDeleteKlasifikasi?: (id: string) => void;
   onAddInstansi?: (item: Omit<MasterInstansi, 'id'>) => void;
@@ -17,6 +28,9 @@ interface MasterDataViewProps {
   onAddKelas?: (item: Omit<MasterKelas, 'id'>) => void;
   onUpdateKelas?: (id: string, item: Partial<MasterKelas>) => void;
   onDeleteKelas?: (id: string) => void;
+  onAddKelasDiampu?: (item: Omit<KelasDiampu, 'id'>) => void;
+  onUpdateKelasDiampu?: (id: string, item: Partial<KelasDiampu>) => void;
+  onDeleteKelasDiampu?: (id: string) => void;
 }
 
 export const MasterDataView: React.FC<MasterDataViewProps> = ({
@@ -24,7 +38,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   instansiList = [],
   pejabatList = [],
   kelasList = [],
+  kelasDiampuList = [],
   guruList = [],
+  schoolProfile,
   onAddKlasifikasi,
   onDeleteKlasifikasi,
   onAddInstansi,
@@ -34,8 +50,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   onAddKelas,
   onUpdateKelas,
   onDeleteKelas,
+  onAddKelasDiampu,
+  onUpdateKelasDiampu,
+  onDeleteKelasDiampu,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'kelas' | 'klasifikasi' | 'instansi' | 'pejabat'>('kelas');
+  const [activeSubTab, setActiveSubTab] = useState<'kelas' | 'kelas-diampu' | 'klasifikasi' | 'instansi' | 'pejabat'>('kelas');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingKelasId, setEditingKelasId] = useState<string | null>(null);
 
@@ -261,6 +280,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
               Database Kelas ({kelasList.length})
             </button>
             <button
+              id="subtab-kelas-diampu"
+              onClick={() => setActiveSubTab('kelas-diampu')}
+              className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeSubTab === 'kelas-diampu'
+                  ? 'bg-white text-[#006f66] shadow-xs'
+                  : 'text-[#45464d] hover:text-black'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">assignment_ind</span>
+              Kelas yang Diampu ({kelasDiampuList.length})
+            </button>
+            <button
               id="subtab-klasifikasi"
               onClick={() => setActiveSubTab('klasifikasi')}
               className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
@@ -298,26 +329,30 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
             </button>
           </div>
 
-          <button
-            id="btn-add-master-data"
-            onClick={handleOpenAdd}
-            className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-black/85 flex items-center justify-center gap-1.5 focus-ring-teal cursor-pointer shadow-xs whitespace-nowrap self-end sm:self-auto"
-          >
-            <span className="material-symbols-outlined text-[17px]">add</span>
-            {activeSubTab === 'kelas'
-              ? 'Tambah Kelas / Rombel'
-              : activeSubTab === 'klasifikasi'
-              ? 'Tambah Klasifikasi'
-              : activeSubTab === 'instansi'
-              ? 'Tambah Instansi'
-              : 'Tambah Pejabat'}
-          </button>
+          {activeSubTab !== 'kelas-diampu' && (
+            <button
+              id="btn-add-master-data"
+              onClick={handleOpenAdd}
+              className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-black/85 flex items-center justify-center gap-1.5 focus-ring-teal cursor-pointer shadow-xs whitespace-nowrap self-end sm:self-auto"
+            >
+              <span className="material-symbols-outlined text-[17px]">add</span>
+              {activeSubTab === 'kelas'
+                ? 'Tambah Kelas / Rombel'
+                : activeSubTab === 'klasifikasi'
+                ? 'Tambah Klasifikasi'
+                : activeSubTab === 'instansi'
+                ? 'Tambah Instansi'
+                : 'Tambah Pejabat'}
+            </button>
+          )}
         </div>
 
         {/* Subtab Description */}
         <p className="text-xs text-[#76777d]">
           {activeSubTab === 'kelas'
             ? 'Kelola master database kelas & rombongan belajar (rombel), data wali kelas, nomor ruangan, dan sebaran peserta didik sekolah.'
+            : activeSubTab === 'kelas-diampu'
+            ? 'Basis data penugasan mengajar guru: daftar kelas/rombel yang diampu, mata pelajaran, beban jam pelajaran (JP), dan jadwal mengajar.'
             : activeSubTab === 'klasifikasi'
             ? 'Daftar kode klasifikasi arsip surat kedinasan pendidikan untuk klasifikasi surat masuk & keluar.'
             : activeSubTab === 'instansi'
@@ -421,11 +456,25 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         </div>
       )}
 
-      {/* MAIN TABLE WRAPPER */}
-      <div className="bg-white border border-[#c6c6cd] rounded-xl overflow-hidden shadow-xs">
-        <ResponsiveTableWrapper id="master-data-table-scroll" minWidth="min-w-[760px]">
-          {/* 1. TABLE KELAS */}
-          {activeSubTab === 'kelas' && (
+      {/* KELAS YANG DIAMPU VIEW */}
+      {activeSubTab === 'kelas-diampu' && (
+        <KelasDiampuTab
+          kelasDiampuList={kelasDiampuList}
+          kelasList={kelasList}
+          guruList={guruList}
+          schoolProfile={schoolProfile}
+          onAddKelasDiampu={onAddKelasDiampu}
+          onUpdateKelasDiampu={onUpdateKelasDiampu}
+          onDeleteKelasDiampu={onDeleteKelasDiampu}
+        />
+      )}
+
+      {/* MAIN TABLE WRAPPER FOR OTHER SUBTABS */}
+      {activeSubTab !== 'kelas-diampu' && (
+        <div className="bg-white border border-[#c6c6cd] rounded-xl overflow-hidden shadow-xs">
+          <ResponsiveTableWrapper id="master-data-table-scroll" minWidth="min-w-[760px]">
+            {/* 1. TABLE KELAS */}
+            {activeSubTab === 'kelas' && (
             <table id="table-database-kelas" className="w-full text-left border-collapse">
               <thead className="bg-[#f2f4f6] border-b border-[#c6c6cd]">
                 <tr>
@@ -654,6 +703,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           )}
         </ResponsiveTableWrapper>
       </div>
+      )}
 
       {/* ADD / EDIT MODAL */}
       {showAddModal && (
