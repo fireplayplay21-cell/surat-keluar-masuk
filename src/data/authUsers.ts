@@ -1,4 +1,5 @@
-import { AppUser, RolePermissions, UserRole } from '../types';
+import { AppUser, RolePermissions, UserRole, DataPengguna } from '../types';
+import { INITIAL_PENGGUNA } from './initialData';
 
 export const ROLE_DEFINITIONS: Record<
   UserRole,
@@ -75,104 +76,187 @@ export const ROLE_DEFINITIONS: Record<
   },
 };
 
-export const INITIAL_AUTH_USERS: AppUser[] = [
-  {
-    id: 'user-admin',
-    username: 'admin',
-    password: '123',
-    nama: 'Budi Santoso, S.AP.',
-    nip: '19750821 200501 1 008',
-    role: 'admin',
-    roleLabel: 'Administrator Tata Usaha',
-    jabatan: 'Kepala Urusan Tata Usaha',
-    kelas: '-',
-    email: 'budi.santoso@guru.sd.belajar.id',
-    telepon: '0813-8765-4321',
-    fotoInitials: 'BS',
-    statusKepegawaian: 'PNS',
-    permissions: ROLE_DEFINITIONS.admin.permissions,
-  },
-  {
-    id: 'user-kepsek',
-    username: 'kepsek',
-    password: '123',
-    nama: 'Ampena, S., S.Pd',
-    nip: '19680512 199303 1 004',
-    role: 'kepala_sekolah',
-    roleLabel: 'Kepala Sekolah',
-    jabatan: 'Kepala UPTD SPF SDN Mawas',
-    kelas: '-',
-    email: 'ampena.kepsek@guru.sd.belajar.id',
-    telepon: '0812-3456-7890',
-    fotoInitials: 'AS',
-    statusKepegawaian: 'PNS',
-    permissions: ROLE_DEFINITIONS.kepala_sekolah.permissions,
-  },
-  {
-    id: 'user-guru-siti',
-    username: 'guru.siti',
-    password: '123',
-    nama: 'Siti Rahayu, S.Pd., M.Si.',
-    nip: '19820315 200801 2 015',
-    role: 'guru',
-    roleLabel: 'Guru / Wali Kelas 6A',
-    jabatan: 'Guru Kelas 6A / Wakasek Kurikulum',
-    kelas: 'Kelas 6A',
-    email: 'siti.rahayu@guru.sd.belajar.id',
-    telepon: '0815-6789-0123',
-    fotoInitials: 'SR',
-    statusKepegawaian: 'PNS',
-    permissions: ROLE_DEFINITIONS.guru.permissions,
-  },
-  {
-    id: 'user-guru-nurul',
-    username: 'guru.nurul',
-    password: '123',
-    nama: 'Nurul Hidayati, S.Pd.SD',
-    nip: '19881120 201403 2 007',
-    role: 'guru',
-    roleLabel: 'Guru / Wali Kelas 1A',
-    jabatan: 'Guru Kelas 1A',
-    kelas: 'Kelas 1A',
-    email: 'nurul.hidayati@guru.sd.belajar.id',
-    telepon: '0812-9876-1122',
-    fotoInitials: 'NH',
-    statusKepegawaian: 'PNS',
-    permissions: ROLE_DEFINITIONS.guru.permissions,
-  },
-  {
-    id: 'user-guru-bayu',
-    username: 'guru.bayu',
-    password: '123',
-    nama: 'Bayu Pratama, S.Pd.Jas',
-    nip: '19941008 202221 1 003',
-    role: 'guru',
-    roleLabel: 'Guru Mapel PJOK',
-    jabatan: 'Guru PJOK & Pembina Olahraga',
-    kelas: 'Semua Kelas',
-    email: 'bayu.pratama@guru.sd.belajar.id',
-    telepon: '0877-6655-4433',
-    fotoInitials: 'BP',
-    statusKepegawaian: 'PPPK',
-    permissions: ROLE_DEFINITIONS.guru.permissions,
-  },
-  {
-    id: 'user-guru-rizky',
-    username: 'guru.rizky',
-    password: '123',
-    nama: 'Ustadz Muhammad Rizky, S.Pd.I',
-    nip: '19870312 201101 1 009',
-    role: 'guru',
-    roleLabel: 'Guru Mapel PAI',
-    jabatan: 'Guru Pendidikan Agama Islam (PAI)',
-    kelas: 'Semua Kelas',
-    email: 'm.rizky@guru.sd.belajar.id',
-    telepon: '0812-7788-9900',
-    fotoInitials: 'MR',
-    statusKepegawaian: 'PNS',
-    permissions: ROLE_DEFINITIONS.guru.permissions,
-  },
-];
+/**
+ * Generate photo initials from full name
+ */
+export function getFotoInitials(nama: string): string {
+  if (!nama) return 'U';
+  return (
+    nama
+      .replace(/^(Drs\.|Dr\.|H\.|Hj\.|Ustadz|Ir\.)\s+/gi, '')
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase() || 'U'
+  );
+}
+
+/**
+ * Determine user role based on jabatan and explicit role
+ */
+export function determineUserRole(jabatan: string, explicitRole?: UserRole): UserRole {
+  if (explicitRole) return explicitRole;
+  const j = (jabatan || '').toLowerCase();
+  if (j.includes('kepala sekolah') || j.includes('kepsek')) {
+    return 'kepala_sekolah';
+  }
+  if (
+    j.includes('tata usaha') ||
+    j.includes('kaur tu') ||
+    j.includes('admin') ||
+    j.includes('operator dapodik') ||
+    j.includes('operator it')
+  ) {
+    return 'admin';
+  }
+  return 'guru';
+}
+
+/**
+ * Determine user friendly role label
+ */
+export function determineRoleLabel(role: UserRole, jabatan: string, kelas?: string): string {
+  if (role === 'kepala_sekolah') return 'Kepala Sekolah';
+  if (role === 'admin') {
+    if (jabatan.toLowerCase().includes('tata usaha')) return 'Administrator Tata Usaha';
+    if (jabatan.toLowerCase().includes('dapodik')) return 'Operator Dapodik / Admin IT';
+    return 'Administrator Tata Usaha';
+  }
+  if (kelas && kelas !== '-' && kelas.toLowerCase() !== 'semua kelas') {
+    return `Guru / Wali ${kelas}`;
+  }
+  return jabatan || 'Guru & Tenaga Pendidik (GTK)';
+}
+
+/**
+ * Generate a friendly username for an employee
+ */
+export function generateUsernameForPegawai(
+  pegawai: DataPengguna,
+  role: UserRole,
+  usedUsernames: Set<string>
+): string {
+  if (pegawai.username && !usedUsernames.has(pegawai.username.toLowerCase())) {
+    return pegawai.username.toLowerCase();
+  }
+
+  // Priority for known key roles
+  if (role === 'kepala_sekolah' && !usedUsernames.has('kepsek')) {
+    return 'kepsek';
+  }
+  if (role === 'admin' && !usedUsernames.has('admin')) {
+    return 'admin';
+  }
+
+  // Clean email prefix
+  if (pegawai.email) {
+    const emailPrefix = pegawai.email.split('@')[0].toLowerCase().replace(/[^a-z0-9.]/g, '');
+    if (emailPrefix && !usedUsernames.has(emailPrefix)) {
+      return emailPrefix;
+    }
+  }
+
+  // Extract clean first name
+  const cleanName = (pegawai.nama || '')
+    .replace(/^(Drs\.|Dr\.|H\.|Hj\.|Ustadz|Ir\.)\s+/gi, '')
+    .replace(/,.*$/, '')
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)[0]
+    .replace(/[^a-z0-9]/g, '');
+
+  const base = role === 'guru' ? `guru.${cleanName || 'user'}` : cleanName || 'user';
+  let candidate = base;
+  let counter = 2;
+  while (usedUsernames.has(candidate)) {
+    candidate = `${base}${counter}`;
+    counter++;
+  }
+  return candidate;
+}
+
+/**
+ * Synchronize authentication accounts with the employee / pegawai database
+ * Ensures all login profiles, names, roles, NIP, and contacts strictly reflect the database.
+ */
+export function syncAuthUsersWithPegawai(
+  pegawaiList: DataPengguna[],
+  existingAuthUsers: AppUser[] = []
+): AppUser[] {
+  const existingMap = new Map<string, AppUser>();
+
+  existingAuthUsers.forEach((u) => {
+    existingMap.set(u.id, u);
+    if (u.nip && u.nip !== '-') existingMap.set(`nip:${u.nip.replace(/\s+/g, '')}`, u);
+    if (u.email) existingMap.set(`email:${u.email.toLowerCase()}`, u);
+    if (u.username) existingMap.set(`user:${u.username.toLowerCase()}`, u);
+  });
+
+  const usedUsernames = new Set<string>();
+  const syncedUsers: AppUser[] = [];
+
+  // Synchronize active employees first, then others
+  const sortedPegawai = [...pegawaiList].sort((a, b) => {
+    // Keep Kepala Sekolah and TU at top
+    const aIsKepsek = a.jabatan.toLowerCase().includes('kepala sekolah');
+    const bIsKepsek = b.jabatan.toLowerCase().includes('kepala sekolah');
+    if (aIsKepsek && !bIsKepsek) return -1;
+    if (!aIsKepsek && bIsKepsek) return 1;
+
+    const aIsTU = a.jabatan.toLowerCase().includes('tata usaha') || a.jabatan.toLowerCase().includes('admin');
+    const bIsTU = b.jabatan.toLowerCase().includes('tata usaha') || b.jabatan.toLowerCase().includes('admin');
+    if (aIsTU && !bIsTU) return -1;
+    if (!aIsTU && bIsTU) return 1;
+
+    return a.nama.localeCompare(b.nama);
+  });
+
+  sortedPegawai.forEach((pegawai) => {
+    // Skip completely inactive if needed, but keeping them allows graceful access control
+    const cleanNip = pegawai.nip ? pegawai.nip.replace(/\s+/g, '') : '';
+    const cleanEmail = pegawai.email ? pegawai.email.toLowerCase() : '';
+
+    const matchedExisting =
+      existingMap.get(pegawai.id) ||
+      (cleanNip && cleanNip !== '-' ? existingMap.get(`nip:${cleanNip}`) : undefined) ||
+      (cleanEmail ? existingMap.get(`email:${cleanEmail}`) : undefined);
+
+    const role = determineUserRole(pegawai.jabatan, pegawai.role || matchedExisting?.role);
+    const roleLabel = determineRoleLabel(role, pegawai.jabatan, pegawai.kelas);
+
+    // Determine username
+    let username = pegawai.username || matchedExisting?.username;
+    if (!username || usedUsernames.has(username.toLowerCase())) {
+      username = generateUsernameForPegawai(pegawai, role, usedUsernames);
+    }
+    usedUsernames.add(username.toLowerCase());
+
+    const password = pegawai.password || matchedExisting?.password || '123';
+
+    syncedUsers.push({
+      id: pegawai.id,
+      username,
+      password,
+      nama: pegawai.nama, // 100% Synchronized with database pegawai!
+      nip: pegawai.nip || '-',
+      role,
+      roleLabel,
+      jabatan: pegawai.jabatan || '-',
+      kelas: pegawai.kelas || '-',
+      email: pegawai.email || '',
+      telepon: pegawai.telepon || '-',
+      fotoInitials: getFotoInitials(pegawai.nama),
+      statusKepegawaian: pegawai.statusKepegawaian || 'PNS',
+      permissions: ROLE_DEFINITIONS[role].permissions,
+    });
+  });
+
+  return syncedUsers;
+}
+
+export const INITIAL_AUTH_USERS: AppUser[] = syncAuthUsersWithPegawai(INITIAL_PENGGUNA);
 
 export interface RoleMatrixFeature {
   kategori: string;

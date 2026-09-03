@@ -28,7 +28,7 @@ import {
   INITIAL_SCHOOL_PROFILE,
   INITIAL_PENGGUNA,
 } from './data/initialData';
-import { INITIAL_AUTH_USERS } from './data/authUsers';
+import { INITIAL_AUTH_USERS, syncAuthUsersWithPegawai, getFotoInitials } from './data/authUsers';
 import {
   db,
   COLLECTIONS,
@@ -77,18 +77,6 @@ export default function App() {
   });
 
   const [isRoleMatrixOpen, setIsRoleMatrixOpen] = useState(false);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('sdn01_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('sdn01_current_user');
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('sdn01_auth_users', JSON.stringify(authUsers));
-  }, [authUsers]);
 
   // Main state with initial fallback
   const [suratMasukList, setSuratMasukList] = useState<SuratMasuk[]>(() => {
@@ -141,6 +129,55 @@ export default function App() {
     }
     return INITIAL_SCHOOL_PROFILE;
   });
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('sdn01_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('sdn01_current_user');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('sdn01_auth_users', JSON.stringify(authUsers));
+  }, [authUsers]);
+
+  // Synchronize login users and current logged-in user with the employee (pegawai) database
+  useEffect(() => {
+    if (penggunaList && penggunaList.length > 0) {
+      const synced = syncAuthUsersWithPegawai(penggunaList, authUsers);
+      setAuthUsers(synced);
+
+      // If a user is currently logged in, sync their details (nama, role, nip, etc.)
+      if (currentUser) {
+        const cleanUserNip = currentUser.nip ? currentUser.nip.replace(/\s+/g, '') : '';
+        const matchingSynced = synced.find(
+          (u) =>
+            u.id === currentUser.id ||
+            (cleanUserNip && cleanUserNip !== '-' && u.nip.replace(/\s+/g, '') === cleanUserNip) ||
+            u.username.toLowerCase() === currentUser.username.toLowerCase() ||
+            u.email.toLowerCase() === currentUser.email.toLowerCase() ||
+            u.nama.toLowerCase() === currentUser.nama.toLowerCase()
+        );
+
+        if (matchingSynced) {
+          if (
+            matchingSynced.nama !== currentUser.nama ||
+            matchingSynced.nip !== currentUser.nip ||
+            matchingSynced.jabatan !== currentUser.jabatan ||
+            matchingSynced.kelas !== currentUser.kelas ||
+            matchingSynced.role !== currentUser.role ||
+            matchingSynced.roleLabel !== currentUser.roleLabel ||
+            matchingSynced.email !== currentUser.email ||
+            matchingSynced.telepon !== currentUser.telepon ||
+            matchingSynced.statusKepegawaian !== currentUser.statusKepegawaian
+          ) {
+            setCurrentUser(matchingSynced);
+          }
+        }
+      }
+    }
+  }, [penggunaList]);
 
   // Local storage caching
   useEffect(() => {
@@ -605,6 +642,29 @@ export default function App() {
       );
     } else {
       setPenggunaList((prev) => [fullItem, ...prev]);
+    }
+
+    // Immediately sync current logged in user if their employee record was edited
+    if (
+      currentUser &&
+      (currentUser.id === targetId ||
+        (currentUser.nip && currentUser.nip !== '-' && currentUser.nip === fullItem.nip))
+    ) {
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              nama: fullItem.nama,
+              nip: fullItem.nip,
+              jabatan: fullItem.jabatan,
+              kelas: fullItem.kelas,
+              telepon: fullItem.telepon,
+              email: fullItem.email || prev.email,
+              statusKepegawaian: fullItem.statusKepegawaian,
+              fotoInitials: getFotoInitials(fullItem.nama),
+            }
+          : null
+      );
     }
 
     try {

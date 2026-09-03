@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { DataPengguna, MasterKelas } from '../types';
+import { DataPengguna, MasterKelas, UserRole } from '../types';
+import { determineUserRole } from '../data/authUsers';
 
 interface ModalDataPenggunaProps {
   isOpen: boolean;
@@ -73,6 +74,9 @@ export const ModalDataPengguna: React.FC<ModalDataPenggunaProps> = ({
   const [telepon, setTelepon] = useState('');
   const [email, setEmail] = useState('');
   const [statusAktif, setStatusAktif] = useState(true);
+  const [role, setRole] = useState<UserRole>('guru');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('123');
 
   useEffect(() => {
     if (editItem) {
@@ -85,6 +89,9 @@ export const ModalDataPengguna: React.FC<ModalDataPenggunaProps> = ({
       setTelepon(editItem.telepon || '');
       setEmail(editItem.email || '');
       setStatusAktif(editItem.statusAktif !== false);
+      setRole(editItem.role || determineUserRole(editItem.jabatan || ''));
+      setUsername(editItem.username || '');
+      setPassword(editItem.password || '123');
     } else {
       setNama('');
       setNip('');
@@ -95,8 +102,19 @@ export const ModalDataPengguna: React.FC<ModalDataPenggunaProps> = ({
       setTelepon('');
       setEmail('');
       setStatusAktif(true);
+      setRole('guru');
+      setUsername('');
+      setPassword('123');
     }
   }, [editItem, isOpen]);
+
+  // Suggest role automatically when jabatan changes if in add mode
+  const handleJabatanChange = (newJabatan: string) => {
+    setJabatan(newJabatan);
+    if (!editItem) {
+      setRole(determineUserRole(newJabatan));
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -118,6 +136,9 @@ export const ModalDataPengguna: React.FC<ModalDataPenggunaProps> = ({
         telepon: telepon.trim() || '-',
         email: email.trim() || undefined,
         statusAktif,
+        role,
+        username: username.trim() || undefined,
+        password: password.trim() || '123',
       },
       editItem?.id
     );
@@ -238,7 +259,7 @@ export const ModalDataPengguna: React.FC<ModalDataPenggunaProps> = ({
                 required
                 list="jabatan-list"
                 value={jabatan}
-                onChange={(e) => setJabatan(e.target.value)}
+                onChange={(e) => handleJabatanChange(e.target.value)}
                 placeholder="e.g. Guru Kelas 1A / Guru PJOK"
                 className="w-full border border-[#c6c6cd] rounded p-2 text-sm input-focus-glow font-medium"
               />
@@ -312,6 +333,71 @@ export const ModalDataPengguna: React.FC<ModalDataPenggunaProps> = ({
                 placeholder="e.g. nama.guru@guru.sd.belajar.id"
                 className="w-full border border-[#c6c6cd] rounded p-2 text-sm input-focus-glow"
               />
+            </div>
+          </div>
+
+          {/* Pengaturan Akun & Akses Login (Sinkronisasi Otomatis) */}
+          <div className="bg-[#86f2e4]/15 border border-[#006a61]/25 rounded-xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#006a61] text-[20px]">
+                  manage_accounts
+                </span>
+                <div>
+                  <span className="text-xs font-bold text-[#006f66] block">
+                    Sinkronisasi Akun Login Pengguna
+                  </span>
+                  <span className="text-[10px] text-[#45464d]">
+                    Nama dan profil pegawai otomatis terhubung dengan akses login sistem persuratan.
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] bg-[#006a61] text-white px-2 py-0.5 rounded-full font-bold shrink-0">
+                Tersinkron Otomatis
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-bold text-[#45464d] mb-1">
+                  Peran Hak Akses Login
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  className="w-full border border-[#c6c6cd] rounded p-1.5 text-xs input-focus-glow bg-white font-medium text-black"
+                >
+                  <option value="admin">Administrator TU</option>
+                  <option value="kepala_sekolah">Kepala Sekolah</option>
+                  <option value="guru">Guru & Tenaga Pendidik</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#45464d] mb-1">
+                  Username Login
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. guru.siti (opsional)"
+                  className="w-full border border-[#c6c6cd] rounded p-1.5 text-xs input-focus-glow bg-white text-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#45464d] mb-1">
+                  Kata Sandi (Password)
+                </label>
+                <input
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Default: 123"
+                  className="w-full border border-[#c6c6cd] rounded p-1.5 text-xs input-focus-glow bg-white text-black"
+                />
+              </div>
             </div>
           </div>
 

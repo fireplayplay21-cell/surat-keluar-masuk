@@ -187,6 +187,22 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
         </div>
       </div>
 
+      {/* Synchronization Banner */}
+      <div className="bg-[#86f2e4]/20 border border-[#006a61]/25 rounded-xl p-3 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5 text-[#006f66]">
+          <span className="material-symbols-outlined text-[20px] text-[#006a61]">sync</span>
+          <div>
+            <span className="font-bold">Sinkronisasi Pengguna Login Aktif: </span>
+            <span className="text-[#45464d]">
+              Nama guru & staf di database ini langsung terhubung dengan akun login sistem persuratan.
+            </span>
+          </div>
+        </div>
+        <span className="text-[11px] font-extrabold text-[#006a61] bg-white px-2.5 py-1 rounded-lg border border-[#006a61]/20 shadow-2xs whitespace-nowrap">
+          {penggunaList.length} Akun Tersinkron
+        </span>
+      </div>
+
       {/* Quick Statistics KPI Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {/* Total Pengguna */}
@@ -394,10 +410,18 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
                             <div className="font-bold text-black text-[13px] hover:text-[#006a61] cursor-pointer" onClick={() => onViewDetail(item)}>
                               {item.nama}
                             </div>
-                            <div className="text-[11px] text-[#76777d] flex items-center gap-1.5 mt-0.5">
+                            <div className="text-[11px] text-[#76777d] flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <span>NIP: {item.nip}</span>
                               <span>•</span>
                               <span>{item.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
+                              {item.username && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-[10px] font-mono bg-[#86f2e4]/30 text-[#006f66] px-1.5 py-0.2 rounded font-semibold">
+                                    @{item.username}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>

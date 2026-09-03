@@ -134,6 +134,41 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
               )}
             </div>
           </div>
+
+          {/* Akun Login Tersinkron */}
+          <div className="bg-[#86f2e4]/15 border border-[#006a61]/20 p-3 rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-[#006f66] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">account_circle</span>
+                Akun Pengguna Sistem (Tersinkronisasi)
+              </h4>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                Aktif & Terhubung
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-black pt-1">
+              <div>
+                <span className="text-[#45464d] text-[10px] uppercase font-bold block">
+                  Username Login
+                </span>
+                <span className="font-mono font-bold text-[#006a61] text-xs">
+                  @{pengguna.username || 'user'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[#45464d] text-[10px] uppercase font-bold block">
+                  Hak Akses Peran
+                </span>
+                <span className="font-bold text-black text-xs">
+                  {pengguna.role === 'admin'
+                    ? 'Administrator TU'
+                    : pengguna.role === 'kepala_sekolah'
+                    ? 'Kepala Sekolah'
+                    : 'Guru & GTK'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer Actions */}

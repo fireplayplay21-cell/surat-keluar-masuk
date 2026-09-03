@@ -15,6 +15,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
   const [errorMessage, setErrorMessage] = useState('');
   const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<'all' | 'admin' | 'kepala_sekolah' | 'guru'>('all');
+  const [searchPegawaiQuery, setSearchPegawaiQuery] = useState('');
 
   const handleManualLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
     const trimmedPass = passwordInput.trim();
 
     if (!trimmedUser) {
-      setErrorMessage('Silakan masukkan Username, NIP, atau Email Anda.');
+      setErrorMessage('Silakan masukkan Username, NIP, Email, atau Nama Pegawai.');
       return;
     }
     if (!trimmedPass) {
@@ -32,17 +33,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
       return;
     }
 
-    // Match by username, email, or nip
+    const cleanInputNip = trimmedUser.replace(/\s+/g, '');
+
+    // Match by username, email, nip, or synchronized full name
     const foundUser = usersList.find(
       (u) =>
         u.username.toLowerCase() === trimmedUser ||
         u.email.toLowerCase() === trimmedUser ||
-        (u.nip && u.nip.replace(/\s+/g, '') === trimmedUser.replace(/\s+/g, ''))
+        (u.nip && u.nip.replace(/\s+/g, '') === cleanInputNip && cleanInputNip !== '-') ||
+        u.nama.toLowerCase() === trimmedUser ||
+        u.nama.toLowerCase().includes(trimmedUser)
     );
 
     if (!foundUser) {
       setErrorMessage(
-        'Akun tidak ditemukan. Gunakan username "admin", "kepsek", atau "guru.siti" (password: 123).'
+        'Akun tidak ditemukan. Masukkan Username, NIP, Email, atau Nama Pegawai yang terdaftar di database (password default: 123).'
       );
       return;
     }
@@ -50,7 +55,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
     // Check password (accept predefined password or fallback default '123' / '123456')
     const validPasswords = [foundUser.password || '123', '123', '123456', 'admin123', 'kepsek123', 'guru123'];
     if (!validPasswords.includes(trimmedPass)) {
-      setErrorMessage('Kata sandi yang Anda masukkan salah. Coba gunakan sandi "123".');
+      setErrorMessage('Kata sandi yang Anda masukkan salah. Coba gunakan sandi default "123".');
       return;
     }
 
@@ -62,8 +67,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
   };
 
   const filteredUsers = usersList.filter((u) => {
-    if (selectedRoleFilter === 'all') return true;
-    return u.role === selectedRoleFilter;
+    if (selectedRoleFilter !== 'all' && u.role !== selectedRoleFilter) {
+      return false;
+    }
+    if (searchPegawaiQuery.trim()) {
+      const q = searchPegawaiQuery.toLowerCase();
+      const matchName = u.nama.toLowerCase().includes(q);
+      const matchNip = u.nip.toLowerCase().includes(q);
+      const matchJabatan = u.jabatan.toLowerCase().includes(q);
+      const matchUser = u.username.toLowerCase().includes(q);
+      const matchKelas = u.kelas ? u.kelas.toLowerCase().includes(q) : false;
+      if (!matchName && !matchNip && !matchJabatan && !matchUser && !matchKelas) {
+        return false;
+      }
+    }
+    return true;
   });
 
   return (
@@ -136,7 +154,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
             <form onSubmit={handleManualLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#45464d] mb-1.5">
-                  Username / NIP / Email Belajar.id
+                  Username, NIP, Email, atau Nama Pegawai
                 </label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#76777d] text-[18px]">
@@ -150,7 +168,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
                       setUsernameInput(e.target.value);
                       if (errorMessage) setErrorMessage('');
                     }}
-                    placeholder="Contoh: admin / kepsek / guru.siti"
+                    placeholder="Contoh: Siti Rahayu / Ampena / 19680512... / admin"
                     className="w-full pl-9 pr-3 py-2.5 border border-[#c6c6cd] rounded-xl text-xs sm:text-sm font-medium input-focus-glow bg-white"
                   />
                 </div>
@@ -231,19 +249,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
           <div className="lg:col-span-7 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-[#c6c6cd]/50">
               <div>
-                <h2 className="text-base font-extrabold text-black flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#006a61] text-[20px]">
-                    account_tree
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-extrabold text-black flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#006a61] text-[20px]">
+                      account_tree
+                    </span>
+                    Pilih Akun Berdasarkan Peran (Role-Based Login)
+                  </h2>
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {usersList.length} Pegawai Tersinkron
                   </span>
-                  Pilih Akun Berdasarkan Peran (Role-Based Login)
-                </h2>
-                <p className="text-xs text-[#45464d]">
-                  Klik tombol pada kartu peran untuk masuk instan dengan hak akses masing-masing.
+                </div>
+                <p className="text-xs text-[#45464d] mt-0.5">
+                  Nama, NIP, dan jabatan akun di bawah ini disinkronkan langsung dengan Database Pegawai.
                 </p>
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#c6c6cd]/60">
+              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#c6c6cd]/60 shrink-0">
                 <button
                   onClick={() => setSelectedRoleFilter('all')}
                   className={`px-2 py-1 rounded text-[11px] font-bold transition-colors cursor-pointer ${
@@ -252,7 +276,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
                       : 'text-[#45464d] hover:bg-[#f2f4f6]'
                   }`}
                 >
-                  Semua
+                  Semua ({usersList.length})
                 </button>
                 <button
                   onClick={() => setSelectedRoleFilter('admin')}
@@ -287,82 +311,116 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
               </div>
             </div>
 
-            {/* List of Role Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {filteredUsers.map((user) => {
-                const roleMeta = ROLE_DEFINITIONS[user.role];
-                return (
-                  <div
-                    key={user.id}
-                    className="bg-white p-4 rounded-xl border border-[#c6c6cd]/60 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Badge and Role Indicator */}
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${roleMeta.badgeColor}`}
-                        >
-                          <span className="material-symbols-outlined text-[13px]">
-                            {roleMeta.icon}
-                          </span>
-                          {user.role === 'admin'
-                            ? 'Admin TU'
-                            : user.role === 'kepala_sekolah'
-                            ? 'Kepala Sekolah'
-                            : 'Dewan Guru'}
-                        </span>
-                        <span className="text-[11px] font-mono text-[#76777d] bg-[#f2f4f6] px-1.5 py-0.5 rounded">
-                          @{user.username}
-                        </span>
-                      </div>
+            {/* Quick Search for Employees */}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#76777d] text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={searchPegawaiQuery}
+                onChange={(e) => setSearchPegawaiQuery(e.target.value)}
+                placeholder="Cari nama pegawai, NIP, mata pelajaran, atau username login..."
+                className="w-full pl-9 pr-8 py-2 text-xs bg-white border border-[#c6c6cd]/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006a61]/30 focus:border-[#006a61]"
+              />
+              {searchPegawaiQuery && (
+                <button
+                  onClick={() => setSearchPegawaiQuery('')}
+                  className="absolute right-2.5 top-2.5 text-xs text-[#76777d] hover:text-black font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-                      {/* User Info */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#86f2e4]/30 text-[#006f66] font-black text-sm flex items-center justify-center shrink-0 border border-[#006a61]/20">
-                          {user.fotoInitials}
+            {/* List of Role Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[560px] overflow-y-auto pr-1">
+              {filteredUsers.length === 0 ? (
+                <div className="col-span-2 py-8 text-center text-xs text-[#76777d] bg-white rounded-xl border border-[#c6c6cd]/50">
+                  <span className="material-symbols-outlined text-3xl text-[#c6c6cd] block mb-1">
+                    person_off
+                  </span>
+                  Tidak ada pegawai yang sesuai dengan kata kunci pencarian.
+                </div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const roleMeta = ROLE_DEFINITIONS[user.role];
+                  return (
+                    <div
+                      key={user.id}
+                      className="bg-white p-4 rounded-xl border border-[#c6c6cd]/60 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                    >
+                      <div>
+                        {/* Badge and Role Indicator */}
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${roleMeta.badgeColor}`}
+                          >
+                            <span className="material-symbols-outlined text-[13px]">
+                              {roleMeta.icon}
+                            </span>
+                            {user.role === 'admin'
+                              ? 'Admin TU'
+                              : user.role === 'kepala_sekolah'
+                              ? 'Kepala Sekolah'
+                              : 'Dewan Guru'}
+                          </span>
+                          <span className="text-[11px] font-mono text-[#76777d] bg-[#f2f4f6] px-1.5 py-0.5 rounded">
+                            @{user.username}
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-black text-sm leading-tight truncate">
-                            {user.nama}
-                          </h3>
-                          <p className="text-xs text-[#006a61] font-semibold mt-0.5 truncate">
-                            {user.jabatan}
-                          </p>
-                          <div className="text-[11px] text-[#76777d] mt-1 flex items-center gap-1.5">
-                            {user.kelas && user.kelas !== '-' && (
-                              <span className="bg-[#b7c8e1]/30 text-[#38485d] font-bold px-1.5 py-0.5 rounded text-[10px]">
-                                {user.kelas}
+
+                        {/* User Info */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#86f2e4]/30 text-[#006f66] font-black text-sm flex items-center justify-center shrink-0 border border-[#006a61]/20">
+                            {user.fotoInitials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-black text-sm leading-tight truncate" title={user.nama}>
+                              {user.nama}
+                            </h3>
+                            <p className="text-xs text-[#006a61] font-semibold mt-0.5 truncate" title={user.jabatan}>
+                              {user.jabatan}
+                            </p>
+                            <div className="text-[11px] text-[#76777d] mt-1 flex items-center gap-1.5 flex-wrap">
+                              {user.kelas && user.kelas !== '-' && (
+                                <span className="bg-[#b7c8e1]/30 text-[#38485d] font-bold px-1.5 py-0.5 rounded text-[10px]">
+                                  {user.kelas}
+                                </span>
+                              )}
+                              <span className="text-[10px] bg-[#f2f4f6] px-1.5 py-0.5 rounded font-medium">
+                                {user.statusKepegawaian}
                               </span>
-                            )}
-                            <span className="truncate">NIP: {user.nip}</span>
+                              <span className="truncate text-[10px]">NIP: {user.nip}</span>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Quick Scope Description */}
+                        <div className="mt-3 p-2 bg-[#f7f9fb] rounded-lg border border-[#eceef0] text-[11px] text-[#45464d] line-clamp-2">
+                          {user.role === 'admin' &&
+                            '🔑 Akses penuh: Surat Masuk, Keluar, GTK, Master Data, Setting'}
+                          {user.role === 'kepala_sekolah' &&
+                            '✍️ Lembar Disposisi surat masuk, persetujuan surat keluar, rekap laporan'}
+                          {user.role === 'guru' &&
+                            '📋 Baca disposisi terkait tugas/kelas, isi tindak lanjut, direktori kontak'}
+                        </div>
                       </div>
 
-                      {/* Quick Scope Description */}
-                      <div className="mt-3 p-2 bg-[#f7f9fb] rounded-lg border border-[#eceef0] text-[11px] text-[#45464d] line-clamp-2">
-                        {user.role === 'admin' &&
-                          '🔑 Akses penuh: Surat Masuk, Keluar, GTK, Master Data, Setting'}
-                        {user.role === 'kepala_sekolah' &&
-                          '✍️ Lembar Disposisi surat masuk, persetujuan surat keluar, rekap laporan'}
-                        {user.role === 'guru' &&
-                          '📋 Baca disposisi terkait tugas/kelas, isi tindak lanjut, direktori kontak'}
+                      {/* Quick Login Action Button */}
+                      <div className="mt-3 pt-2.5 border-t border-[#eceef0]">
+                        <button
+                          onClick={() => handleQuickLogin(user)}
+                          className="w-full py-2 bg-[#f2f4f6] hover:bg-[#006a61] text-black hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group-hover:bg-[#006a61] group-hover:text-white"
+                        >
+                          <span>Masuk sebagai {user.nama.split(' ')[0]}</span>
+                          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </button>
                       </div>
                     </div>
-
-                    {/* Quick Login Action Button */}
-                    <div className="mt-3 pt-2.5 border-t border-[#eceef0]">
-                      <button
-                        onClick={() => handleQuickLogin(user)}
-                        className="w-full py-2 bg-[#f2f4f6] hover:bg-[#006a61] text-black hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group-hover:bg-[#006a61] group-hover:text-white"
-                      >
-                        <span>Masuk sebagai {user.nama.split(' ')[0]}</span>
-                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             {/* Matrix Link Callout */}

@@ -121,6 +121,9 @@ export interface DataPengguna {
   telepon: string;
   email?: string;
   statusAktif: boolean;
+  role?: UserRole;
+  username?: string;
+  password?: string;
 }
 
 export interface SchoolProfile {
