@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sistem Tata Usaha SDN 01 Harapan Schema",
+  "entities": {
+    "surat_masuk": {
+      "title": "Surat Masuk",
+      "description": "Dokumen surat masuk dinas, disposisi, dan berkas pindaian (PDF/Foto) yang tersimpan di Google Drive",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noUrut": { "type": "string" },
+        "noAgenda": { "type": "string" },
+        "noSurat": { "type": "string" },
+        "tglSurat": { "type": "string" },
+        "tglDiterima": { "type": "string" },
+        "pengirim": { "type": "string" },
+        "perihal": { "type": "string" },
+        "sifat": { "type": "string", "enum": ["biasa", "penting", "rahasia", "segera"] },
+        "status": { "type": "string", "enum": ["menunggu_disposisi", "sudah_disposisi", "selesai"] },
+        "disposisi": { "type": "object" },
+        "ringkasan": { "type": "string" },
+        "fileLampiran": { "type": "string" },
+        "driveFileId": { "type": "string" },
+        "driveWebViewLink": { "type": "string" },
+        "driveThumbnailLink": { "type": "string" },
+        "driveFileName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["noUrut", "noSurat", "tglSurat", "pengirim", "perihal", "sifat", "status"]
+    },
+    "surat_keluar": {
+      "title": "Surat Keluar",
+      "description": "Dokumen surat keluar sekolah beserta penerbit nomor surat dan lampiran scan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noUrut": { "type": "string" },
+        "noAgenda": { "type": "string" },
+        "noSurat": { "type": "string" },
+        "tglSurat": { "type": "string" },
+        "tujuan": { "type": "string" },
+        "perihal": { "type": "string" },
+        "sifat": { "type": "string", "enum": ["biasa", "penting", "rahasia", "segera"] },
+        "status": { "type": "string", "enum": ["draft", "disetujui", "terkirim"] },
+        "penandatangan": { "type": "string" },
+        "pembuatSurat": { "type": "string" },
+        "kodeKlasifikasi": { "type": "string" },
+        "ringkasan": { "type": "string" },
+        "fileLampiran": { "type": "string" },
+        "driveFileId": { "type": "string" },
+        "driveWebViewLink": { "type": "string" },
+        "driveFileName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["noUrut", "noSurat", "tglSurat", "tujuan", "perihal", "sifat", "status"]
+    },
+    "pengguna": {
+      "title": "Data Pengguna dan GTK",
+      "description": "Data akun guru dan tenaga kependidikan sekolah",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "nip": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "kepala_sekolah", "guru"] },
+        "jabatan": { "type": "string" },
+        "status": { "type": "string", "enum": ["aktif", "nonaktif"] },
+        "avatar": { "type": "string" },
+        "noHp": { "type": "string" },
+        "bidangTugas": { "type": "string" },
+        "kelas": { "type": "string" }
+      },
+      "required": ["nama", "nip", "email", "role", "jabatan", "status"]
+    },
+    "master_klasifikasi": {
+      "title": "Master Klasifikasi Surat",
+      "description": "Kode klasifikasi persuratan sekolah",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "kode": { "type": "string" },
+        "nama": { "type": "string" },
+        "deskripsi": { "type": "string" }
+      },
+      "required": ["kode", "nama"]
+    },
+    "school_profile": {
+      "title": "Profil Sekolah",
+      "description": "Informasi profil dan identitas lembaga",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "namaSekolah": { "type": "string" },
+        "npsn": { "type": "string" },
+        "alamat": { "type": "string" },
+        "kelurahan": { "type": "string" },
+        "kecamatan": { "type": "string" },
+        "kota": { "type": "string" },
+        "provinsi": { "type": "string" },
+        "kodePos": { "type": "string" },
+        "telp": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "kepalaSekolah": { "type": "string" },
+        "nipKepalaSekolah": { "type": "string" },
+        "logoUrl": { "type": "string" }
+      },
+      "required": ["namaSekolah", "npsn", "kepalaSekolah"]
+    },
+    "kelas": {
+      "title": "Data Rombel dan Kelas",
+      "description": "Informasi rombongan belajar atau kelas sekolah, wali kelas, ruangan, jumlah siswa, dan tahun ajaran",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "namaKelas": { "type": "string" },
+        "tingkat": { "type": "number" },
+        "waliKelas": { "type": "string" },
+        "nipWaliKelas": { "type": "string" },
+        "tahunAjaran": { "type": "string" },
+        "jumlahSiswa": { "type": "number" },
+        "jumlahLakiLaki": { "type": "number" },
+        "jumlahPerempuan": { "type": "number" },
+        "ruangan": { "type": "string" },
+        "faseKurikulum": { "type": "string" },
+        "keterangan": { "type": "string" }
+      },
+      "required": ["namaKelas", "tingkat", "waliKelas", "tahunAjaran", "jumlahSiswa", "ruangan"]
+    }
+  }
+}

@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-surface: #f7f9fb;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #f2f4f6;
+    --color-surface-container: #eceef0;
+    --color-surface-container-high: #e6e8ea;
+    --color-surface-container-highest: #e0e3e5;
+    --color-primary: #000000;
+    --color-secondary: #006a61;
+    --color-secondary-container: #86f2e4;
+    --color-on-secondary-container: #006f66;
+    --color-outline-variant: #c6c6cd;
+    --color-on-surface: #191c1e;
+    --color-on-surface-variant: #45464d;
+  }
+}
+
+.focus-ring-teal:focus-visible {
+  outline: none;
+  border-color: #006a61;
+  box-shadow: 0 0 0 2px #f7f9fb, 0 0 0 4px #006a61;
+}
+
+.input-focus-glow:focus {
+  outline: none;
+  border-color: #006a61;
+  box-shadow: 0 0 0 3px rgba(0, 106, 97, 0.18);
+}
+
+/* Enhanced table scrollbar for smooth left-right scrolling on desktop & mobile */
+.table-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #006a61 #f2f4f6;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.table-scrollbar::-webkit-scrollbar-track {
+  background: #f2f4f6;
+  border-radius: 4px;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #006a61;
+  border-radius: 4px;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #005049;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-area, #printable-area * {
+    visibility: visible;
+  }
+  #printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

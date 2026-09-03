@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Star / Wildcard collection rule - mencakup seluruh koleksi dan subkoleksi
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Definisi spesifik tiap koleksi sistem tata usaha sekolah
+    match /school_profile/{id} {
+      allow read, write: if true;
+    }
+
+    match /surat_masuk/{suratId} {
+      allow read, write: if true;
+    }
+
+    match /surat_keluar/{suratId} {
+      allow read, write: if true;
+    }
+
+    match /pengguna/{userId} {
+      allow read, write: if true;
+    }
+
+    match /master_klasifikasi/{id} {
+      allow read, write: if true;
+    }
+
+    match /kelas/{kelasId} {
+      allow read, write: if true;
+    }
+  }
+}
+

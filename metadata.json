@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Tata Usaha UPTD SPF SDN Mawas",
+  "description": "Sistem Manajemen Persuratan dan Tata Usaha UPTD SPF SDN Mawas",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
