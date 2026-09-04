@@ -285,8 +285,29 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
                       <td className="py-3.5 px-4 font-medium text-black">
                         {item.tujuan}
                       </td>
-                      <td className="py-3.5 px-4 max-w-xs truncate text-[#191c1e]" title={item.perihal}>
-                        {item.perihal}
+                      <td className="py-3.5 px-4 max-w-xs text-[#191c1e]" title={item.perihal}>
+                        <div className="font-medium text-black line-clamp-2">{item.perihal}</div>
+                        {(item.driveAttachment || item.driveFileId || item.driveWebViewLink) && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="inline-flex items-center gap-1 bg-[#4285F4]/10 text-[#1a73e8] text-[10px] font-bold px-1.5 py-0.2 rounded">
+                              <span className="material-symbols-outlined text-[13px]">cloud_done</span>
+                              Salinan Drive
+                            </span>
+                            {item.driveWebViewLink && (
+                              <a
+                                href={item.driveWebViewLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[11px] text-[#006a61] hover:underline font-semibold flex items-center gap-0.5"
+                                title="Buka berkas di Google Drive"
+                              >
+                                <span>Buka File</span>
+                                <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">{renderSifatBadge(item.sifat)}</td>
                       <td className="py-3.5 px-4">{renderStatusBadge(item.status)}</td>

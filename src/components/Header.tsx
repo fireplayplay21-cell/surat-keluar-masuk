@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabType, SuratMasuk, AppUser } from '../types';
 import { ROLE_DEFINITIONS } from '../data/authUsers';
+import { getDriveAuthStatus, connectGoogleDrive, DriveAuthStatus } from '../services/googleDrive';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -36,6 +37,28 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [driveStatus, setDriveStatus] = useState<DriveAuthStatus>(() => getDriveAuthStatus());
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+
+  useEffect(() => {
+    setDriveStatus(getDriveAuthStatus());
+    const interval = setInterval(() => {
+      setDriveStatus(getDriveAuthStatus());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleQuickConnectDrive = async () => {
+    try {
+      setIsConnectingDrive(true);
+      await connectGoogleDrive();
+      setDriveStatus(getDriveAuthStatus());
+    } catch (err) {
+      console.warn('Google Drive connect cancelled or failed:', err);
+    } finally {
+      setIsConnectingDrive(false);
+    }
+  };
 
   const isGuru = currentUser?.role === 'guru';
   const roleMeta = currentUser ? ROLE_DEFINITIONS[currentUser.role] : null;
@@ -234,6 +257,31 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Google Drive Connection Indicator */}
+            {driveStatus.isConnected ? (
+              <div
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold"
+                title={`Google Drive Aktif (${driveStatus.userEmail || 'Tersambung'}). Arsip scan tersimpan di Drive.`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span className="material-symbols-outlined text-[15px] text-[#4285F4]">cloud_done</span>
+                <span className="max-w-[100px] truncate">{driveStatus.userEmail?.split('@')[0] || 'Drive Aktif'}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleQuickConnectDrive}
+                disabled={isConnectingDrive}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f2f4f6] hover:bg-[#e6e8ea] text-[#45464d] hover:text-[#006a61] border border-[#c6c6cd] text-[11px] font-bold transition-colors cursor-pointer"
+                title="Hubungkan akun Google Drive untuk menyimpan scan surat"
+              >
+                <span className="material-symbols-outlined text-[15px] text-[#4285F4]">
+                  {isConnectingDrive ? 'sync' : 'add_to_drive'}
+                </span>
+                <span>{isConnectingDrive ? 'Menghubungkan...' : 'Google Drive'}</span>
+              </button>
+            )}
 
             {/* Matrix Role Guide Button */}
             <button
