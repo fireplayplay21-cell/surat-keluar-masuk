@@ -440,10 +440,17 @@ export default function App() {
   const nextSuratKeluarNoUrut = useMemo(() => {
     let max = 0;
     suratKeluarList.forEach((item) => {
-      const num = parseInt(item.noUrut || item.noAgenda || '0', 10);
+      let num = parseInt(item.noUrut || item.noAgenda || '0', 10);
+      if (isNaN(num) || num === 0) {
+        const match = item.noSurat?.match(/^[^/]+\/(\d+)\//);
+        if (match) {
+          num = parseInt(match[1], 10);
+        }
+      }
       if (!isNaN(num) && num > max) max = num;
     });
-    return String(max + 1).padStart(3, '0');
+    if (max === 0 || max < 162) return '163';
+    return String(max + 1);
   }, [suratKeluarList]);
 
   const nextSuratMasukAgenda = nextSuratMasukNoUrut;
