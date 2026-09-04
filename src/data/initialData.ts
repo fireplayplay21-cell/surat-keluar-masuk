@@ -132,7 +132,7 @@ export const INITIAL_SURAT_MASUK: SuratMasuk[] = [
     noAsal: '422/KMT-01/X/23',
     tglAsal: '2023-10-26',
     tglAsalFormatted: '26 Okt 2023',
-    pengirim: 'Komite Sekolah SDN 01',
+    pengirim: 'Komite Sekolah UPTD SPF SDN Mawas',
     perihal: 'Usulan Program Gotong Royong dan Penghijauan Taman Sekolah',
     sifat: 'biasa',
     status: 'selesai',

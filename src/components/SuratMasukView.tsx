@@ -414,15 +414,15 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
                       </td>
 
                       {/* Aksi */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-0.5">
                           <button
                             id={`btn-view-${item.id}`}
                             onClick={() => onViewDetail(item)}
-                            className="p-1.5 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                            className="p-1 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded focus-ring-teal transition-colors cursor-pointer"
                             title="Lihat Detail & Berkas Surat"
                           >
-                            <span className="material-symbols-outlined text-[19px]">visibility</span>
+                            <span className="material-symbols-outlined text-[15px]">visibility</span>
                           </button>
 
                           {/* Disposisi Button */}
@@ -430,34 +430,34 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
                             <button
                               id={`btn-disposisi-${item.id}`}
                               onClick={() => onOpenDisposisi(item)}
-                              className="px-2.5 py-1 bg-[#006a61] hover:bg-[#006a61]/90 text-white rounded-lg text-xs font-bold focus-ring-teal transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                              className="px-2 py-0.5 bg-[#006a61] hover:bg-[#006a61]/90 text-white rounded text-[11px] font-bold focus-ring-teal transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
                               title="Beri Lembar Arahan / Disposisi"
                             >
-                              <span className="material-symbols-outlined text-[16px]">assignment</span>
+                              <span className="material-symbols-outlined text-[13px]">assignment</span>
                               <span>Disposisi</span>
                             </button>
                           ) : isGuru ? (
                             <button
                               id={`btn-disposisi-${item.id}`}
                               onClick={() => onOpenDisposisi(item)}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-bold focus-ring-teal transition-colors cursor-pointer flex items-center gap-1 ${
+                              className={`px-2 py-0.5 rounded text-[11px] font-bold focus-ring-teal transition-colors cursor-pointer flex items-center gap-1 ${
                                 isAssigned
                                   ? 'bg-[#86f2e4] text-[#005049] hover:bg-[#86f2e4]/80'
                                   : 'bg-[#e6e8ea] text-[#45464d] hover:bg-[#c6c6cd]/50'
                               }`}
                               title="Lihat Arahan Disposisi & Isi Tindak Lanjut"
                             >
-                              <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                              <span className="material-symbols-outlined text-[13px]">task_alt</span>
                               <span>Tindak Lanjut</span>
                             </button>
                           ) : (
                             <button
                               id={`btn-disposisi-${item.id}`}
                               onClick={() => onOpenDisposisi(item)}
-                              className="p-1.5 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                              className="p-1 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded focus-ring-teal transition-colors cursor-pointer"
                               title="Lembar Disposisi Kepala Sekolah"
                             >
-                              <span className="material-symbols-outlined text-[19px]">assignment</span>
+                              <span className="material-symbols-outlined text-[15px]">assignment</span>
                             </button>
                           )}
 
@@ -466,10 +466,10 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
                             <button
                               id={`btn-edit-${item.id}`}
                               onClick={() => onEdit(item)}
-                              className="p-1.5 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                              className="p-1 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded focus-ring-teal transition-colors cursor-pointer"
                               title="Edit Data Surat"
                             >
-                              <span className="material-symbols-outlined text-[19px]">edit</span>
+                              <span className="material-symbols-outlined text-[15px]">edit</span>
                             </button>
                           )}
 
@@ -482,10 +482,10 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
                                   onDelete(item.id);
                                 }
                               }}
-                              className="p-1.5 text-[#45464d] hover:text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                              className="p-1 text-[#45464d] hover:text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded focus-ring-teal transition-colors cursor-pointer"
                               title="Hapus Surat"
                             >
-                              <span className="material-symbols-outlined text-[19px]">delete</span>
+                              <span className="material-symbols-outlined text-[15px]">delete</span>
                             </button>
                           )}
                         </div>

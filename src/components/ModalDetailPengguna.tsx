@@ -7,6 +7,7 @@ interface ModalDetailPenggunaProps {
   pengguna: DataPengguna | null;
   kelasDiampuList?: KelasDiampu[];
   onEdit: (pengguna: DataPengguna) => void;
+  schoolName?: string;
 }
 
 export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
@@ -15,6 +16,7 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
   pengguna,
   kelasDiampuList = [],
   onEdit,
+  schoolName = 'UPTD SPF SDN Mawas',
 }) => {
   if (!isOpen || !pengguna) return null;
 
@@ -122,7 +124,7 @@ export const ModalDetailPengguna: React.FC<ModalDetailPenggunaProps> = ({
               <span className="text-[11px] font-bold text-[#45464d] uppercase block">
                 Instansi Tugas
               </span>
-              <span className="font-semibold text-black">SDN 01 Harapan</span>
+              <span className="font-semibold text-black">{schoolName}</span>
             </div>
           </div>
 

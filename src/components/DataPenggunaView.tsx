@@ -11,6 +11,7 @@ interface DataPenggunaViewProps {
   onEdit: (pengguna: DataPengguna) => void;
   onDelete: (id: string) => void;
   currentUser?: AppUser | null;
+  schoolName?: string;
 }
 
 export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
@@ -22,6 +23,7 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
   onEdit,
   onDelete,
   currentUser,
+  schoolName = 'UPTD SPF SDN Mawas',
 }) => {
   const [filterKelas, setFilterKelas] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -155,7 +157,7 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
             </h1>
           </div>
           <p className="text-xs text-[#45464d] mt-1">
-            Daftar seluruh pendidik, pembagian kelas diampu, serta jabatan struktural di SDN 01 Harapan.
+            Daftar seluruh pendidik, pembagian kelas diampu, serta jabatan struktural di {schoolName}.
           </p>
         </div>
 
@@ -525,14 +527,14 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
                       </td>
 
                       {/* Aksi */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-0.5">
                           <button
                             onClick={() => onViewDetail(item)}
-                            className="p-1.5 text-[#45464d] hover:text-[#006a61] hover:bg-[#86f2e4]/30 rounded-md transition-colors cursor-pointer"
+                            className="p-1 text-[#45464d] hover:text-[#006a61] hover:bg-[#86f2e4]/30 rounded transition-colors cursor-pointer"
                             title="Lihat Detail Profil"
                           >
-                            <span className="material-symbols-outlined text-[17px]">
+                            <span className="material-symbols-outlined text-[15px]">
                               visibility
                             </span>
                           </button>
@@ -541,10 +543,10 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
                             <>
                               <button
                                 onClick={() => onEdit(item)}
-                                className="p-1.5 text-[#45464d] hover:text-black hover:bg-[#e6e8ea] rounded-md transition-colors cursor-pointer"
+                                className="p-1 text-[#45464d] hover:text-black hover:bg-[#e6e8ea] rounded transition-colors cursor-pointer"
                                 title="Edit Data Guru"
                               >
-                                <span className="material-symbols-outlined text-[17px]">
+                                <span className="material-symbols-outlined text-[15px]">
                                   edit
                                 </span>
                               </button>
@@ -555,10 +557,10 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
                                     onDelete(item.id);
                                   }
                                 }}
-                                className="p-1.5 text-[#76777d] hover:text-[#ba1a1a] hover:bg-[#ffdad6]/40 rounded-md transition-colors cursor-pointer"
+                                className="p-1 text-[#76777d] hover:text-[#ba1a1a] hover:bg-[#ffdad6]/40 rounded transition-colors cursor-pointer"
                                 title="Hapus Data"
                               >
-                                <span className="material-symbols-outlined text-[17px]">
+                                <span className="material-symbols-outlined text-[15px]">
                                   delete
                                 </span>
                               </button>
@@ -581,7 +583,7 @@ export const DataPenggunaView: React.FC<DataPenggunaViewProps> = ({
             <strong>{penggunaList.length}</strong> data guru & tenaga kependidikan
           </div>
           <div className="text-[11px] text-[#76777d]">
-            Sistem Tata Usaha SDN 01 Harapan • Tahun Ajaran 2023/2024
+            Sistem Tata Usaha {schoolName} • Tahun Ajaran 2023/2024
           </div>
         </div>
       </div>

@@ -781,7 +781,13 @@ export default function App() {
   };
 
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={(u) => setCurrentUser(u)} usersList={authUsers} />;
+    return (
+      <LoginPage
+        onLoginSuccess={(u) => setCurrentUser(u)}
+        usersList={authUsers}
+        schoolName={schoolProfile.namaSekolah}
+      />
+    );
   }
 
   return (
@@ -898,6 +904,7 @@ export default function App() {
             kelasDiampuList={kelasDiampuList}
             searchQuery={searchQuery}
             currentUser={currentUser}
+            schoolName={schoolProfile.namaSekolah}
             onAddNew={() => {
               setEditingPengguna(null);
               setIsModalDataPenggunaOpen(true);
@@ -1005,6 +1012,7 @@ export default function App() {
         }}
         pengguna={detailPengguna}
         kelasDiampuList={kelasDiampuList}
+        schoolName={schoolProfile.namaSekolah}
         onEdit={(pengguna) => {
           setDetailPengguna(null);
           setIsModalDetailPenggunaOpen(false);
@@ -1053,6 +1061,7 @@ export default function App() {
       <ModalRoleMatrix
         isOpen={isRoleMatrixOpen}
         onClose={() => setIsRoleMatrixOpen(false)}
+        schoolName={schoolProfile.namaSekolah}
       />
     </div>
   );

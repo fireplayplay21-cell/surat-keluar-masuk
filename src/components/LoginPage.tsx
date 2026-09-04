@@ -6,9 +6,14 @@ import { ModalRoleMatrix } from './ModalRoleMatrix';
 interface LoginPageProps {
   onLoginSuccess: (user: AppUser) => void;
   usersList: AppUser[];
+  schoolName?: string;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({
+  onLoginSuccess,
+  usersList,
+  schoolName = 'UPTD SPF SDN Mawas',
+}) => {
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -449,7 +454,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
       <footer className="bg-white border-t border-[#c6c6cd]/50 py-3 text-center text-xs text-[#76777d] px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div>
-            © {new Date().getFullYear()} SDN 01 Harapan • Sistem Informasi Administrasi Tata Usaha Sekolah
+            © {new Date().getFullYear()} {schoolName} • Sistem Informasi Administrasi Tata Usaha Sekolah
           </div>
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
@@ -464,6 +469,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, usersList 
       <ModalRoleMatrix
         isOpen={isMatrixModalOpen}
         onClose={() => setIsMatrixModalOpen(false)}
+        schoolName={schoolName}
       />
     </div>
   );

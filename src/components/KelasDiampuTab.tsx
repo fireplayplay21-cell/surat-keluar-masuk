@@ -534,15 +534,15 @@ export const KelasDiampuTab: React.FC<KelasDiampuTabProps> = ({
                     </td>
 
                     {/* Aksi */}
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="py-2.5 px-3 text-center">
+                      <div className="flex items-center justify-center gap-0.5">
                         <button
                           id={`btn-edit-diampu-${item.id}`}
                           onClick={() => handleEdit(item)}
-                          className="p-1.5 text-[#006a61] hover:bg-[#86f2e4]/30 rounded transition-colors cursor-pointer"
+                          className="p-1 text-[#006a61] hover:bg-[#86f2e4]/30 rounded transition-colors cursor-pointer"
                           title="Edit Penugasan"
                         >
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                          <span className="material-symbols-outlined text-[15px]">edit</span>
                         </button>
                         <button
                           id={`btn-delete-diampu-${item.id}`}
@@ -555,10 +555,10 @@ export const KelasDiampuTab: React.FC<KelasDiampuTabProps> = ({
                               onDeleteKelasDiampu?.(item.id);
                             }
                           }}
-                          className="p-1.5 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded transition-colors cursor-pointer"
+                          className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded transition-colors cursor-pointer"
                           title="Hapus Penugasan"
                         >
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                          <span className="material-symbols-outlined text-[15px]">delete</span>
                         </button>
                       </div>
                     </td>

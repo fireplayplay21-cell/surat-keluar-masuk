@@ -311,25 +311,25 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
                       </td>
                       <td className="py-3.5 px-4">{renderSifatBadge(item.sifat)}</td>
                       <td className="py-3.5 px-4">{renderStatusBadge(item.status)}</td>
-                      <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <td className="py-2.5 px-3 text-center">
+                      <div className="flex items-center justify-center gap-0.5">
                         {/* Cetak */}
                         <button
                           onClick={() => onPrintSurat(item)}
-                          className="p-1.5 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                          className="p-1 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded focus-ring-teal transition-colors cursor-pointer"
                           title="Cetak Salinan Surat Keluar"
                         >
-                          <span className="material-symbols-outlined text-[19px]">print</span>
+                          <span className="material-symbols-outlined text-[15px]">print</span>
                         </button>
 
                         {/* Kepsek Quick Approval */}
                         {isKepsek && item.status === 'draft' && onApproveSurat && (
                           <button
                             onClick={() => onApproveSurat(item)}
-                            className="px-2.5 py-1 bg-[#86f2e4] text-[#005049] hover:bg-[#86f2e4]/80 rounded-lg text-xs font-bold focus-ring-teal transition-colors cursor-pointer flex items-center gap-1"
+                            className="px-2 py-0.5 bg-[#86f2e4] text-[#005049] hover:bg-[#86f2e4]/80 rounded text-[11px] font-bold focus-ring-teal transition-colors cursor-pointer flex items-center gap-1"
                             title="Setujui dan Sahkan Surat Keluar"
                           >
-                            <span className="material-symbols-outlined text-[15px]">done_all</span>
+                            <span className="material-symbols-outlined text-[13px]">done_all</span>
                             <span>Setujui</span>
                           </button>
                         )}
@@ -338,10 +338,10 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
                         {currentUser?.permissions.canEditSurat && (
                           <button
                             onClick={() => onEdit(item)}
-                            className="p-1.5 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                            className="p-1 text-[#45464d] hover:text-[#006a61] hover:bg-[#e6e8ea] rounded focus-ring-teal transition-colors cursor-pointer"
                             title="Edit Surat Keluar"
                           >
-                            <span className="material-symbols-outlined text-[19px]">edit</span>
+                            <span className="material-symbols-outlined text-[15px]">edit</span>
                           </button>
                         )}
 
@@ -353,10 +353,10 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
                                 onDelete(item.id);
                               }
                             }}
-                            className="p-1.5 text-[#45464d] hover:text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded-lg focus-ring-teal transition-colors cursor-pointer"
+                            className="p-1 text-[#45464d] hover:text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded focus-ring-teal transition-colors cursor-pointer"
                             title="Hapus"
                           >
-                            <span className="material-symbols-outlined text-[19px]">delete</span>
+                            <span className="material-symbols-outlined text-[15px]">delete</span>
                           </button>
                         )}
                       </div>

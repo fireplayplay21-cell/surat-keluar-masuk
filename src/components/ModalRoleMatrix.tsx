@@ -4,9 +4,14 @@ import { ROLE_PERMISSION_MATRIX, ROLE_DEFINITIONS } from '../data/authUsers';
 interface ModalRoleMatrixProps {
   isOpen: boolean;
   onClose: () => void;
+  schoolName?: string;
 }
 
-export const ModalRoleMatrix: React.FC<ModalRoleMatrixProps> = ({ isOpen, onClose }) => {
+export const ModalRoleMatrix: React.FC<ModalRoleMatrixProps> = ({
+  isOpen,
+  onClose,
+  schoolName = 'UPTD SPF SDN Mawas',
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -23,7 +28,7 @@ export const ModalRoleMatrix: React.FC<ModalRoleMatrixProps> = ({ isOpen, onClos
                 Matriks Pemetaan Peran & Hak Akses Pengguna
               </h3>
               <p className="text-xs text-[#45464d] mt-0.5">
-                SDN 01 Harapan • Pembagian wewenang berdasarkan tugas pokok dan fungsi (Tupoksi)
+                {schoolName} • Pembagian wewenang berdasarkan tugas pokok dan fungsi (Tupoksi)
               </p>
             </div>
           </div>
@@ -171,7 +176,7 @@ export const ModalRoleMatrix: React.FC<ModalRoleMatrixProps> = ({ isOpen, onClos
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t border-[#eceef0] mt-4">
           <div className="text-[11px] text-[#76777d]">
-            Sistem Autentikasi SDN 01 Harapan • Akses aman berbasis peran (RBAC)
+            Sistem Autentikasi {schoolName} • Akses aman berbasis peran (RBAC)
           </div>
           <button
             onClick={onClose}

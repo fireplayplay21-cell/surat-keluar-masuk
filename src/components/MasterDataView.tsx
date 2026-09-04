@@ -557,15 +557,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       <td className="py-3.5 px-4 text-xs font-semibold text-[#45464d]">
                         {item.tahunAjaran}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-0.5">
                           <button
                             id={`btn-edit-kelas-${item.id}`}
                             onClick={() => handleEditKelas(item)}
-                            className="p-1.5 text-[#006a61] hover:bg-[#86f2e4]/30 rounded transition-colors cursor-pointer"
+                            className="p-1 text-[#006a61] hover:bg-[#86f2e4]/30 rounded transition-colors cursor-pointer"
                             title="Edit Data Kelas"
                           >
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                            <span className="material-symbols-outlined text-[15px]">edit</span>
                           </button>
                           <button
                             id={`btn-delete-kelas-${item.id}`}
@@ -574,10 +574,10 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                                 onDeleteKelas?.(item.id);
                               }
                             }}
-                            className="p-1.5 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded transition-colors cursor-pointer"
+                            className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded transition-colors cursor-pointer"
                             title="Hapus Kelas"
                           >
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                            <span className="material-symbols-outlined text-[15px]">delete</span>
                           </button>
                         </div>
                       </td>
@@ -605,7 +605,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     <td className="py-3.5 px-4 font-bold text-[#006a61]">{item.kode}</td>
                     <td className="py-3.5 px-4 font-semibold text-black">{item.nama}</td>
                     <td className="py-3.5 px-4 text-[#45464d] text-xs">{item.keterangan}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-2.5 px-3 text-center">
                       <button
                         onClick={() => {
                           if (confirm(`Hapus klasifikasi ${item.kode}?`)) {
@@ -615,7 +615,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                         className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded cursor-pointer"
                         title="Hapus"
                       >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                        <span className="material-symbols-outlined text-[15px]">delete</span>
                       </button>
                     </td>
                   </tr>
@@ -647,7 +647,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     </td>
                     <td className="py-3.5 px-4 text-[#45464d] text-xs">{item.alamat}</td>
                     <td className="py-3.5 px-4 text-black text-xs font-medium">{item.telepon}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-2.5 px-3 text-center">
                       <button
                         onClick={() => {
                           if (confirm(`Hapus instansi ${item.nama}?`)) {
@@ -657,7 +657,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                         className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded cursor-pointer"
                         title="Hapus"
                       >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                        <span className="material-symbols-outlined text-[15px]">delete</span>
                       </button>
                     </td>
                   </tr>
@@ -683,7 +683,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     <td className="py-3.5 px-4 font-bold text-black">{item.nama}</td>
                     <td className="py-3.5 px-4 text-[#006a61] font-semibold text-xs">{item.jabatan}</td>
                     <td className="py-3.5 px-4 text-[#45464d] font-mono text-xs">{item.nip}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-2.5 px-3 text-center">
                       <button
                         onClick={() => {
                           if (confirm(`Hapus pejabat ${item.nama}?`)) {
@@ -693,7 +693,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                         className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded cursor-pointer"
                         title="Hapus"
                       >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                        <span className="material-symbols-outlined text-[15px]">delete</span>
                       </button>
                     </td>
                   </tr>
