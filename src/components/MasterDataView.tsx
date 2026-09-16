@@ -6,10 +6,12 @@ import {
   MasterKelas,
   DataPengguna,
   KelasDiampu,
+  MasterTahunAjaran,
   SchoolProfile,
 } from '../types';
 import { ResponsiveTableWrapper } from './ResponsiveTableWrapper';
 import { KelasDiampuTab } from './KelasDiampuTab';
+import { TahunAjaranTab } from './TahunAjaranTab';
 
 interface MasterDataViewProps {
   klasifikasiList?: MasterKlasifikasi[];
@@ -19,7 +21,14 @@ interface MasterDataViewProps {
   kelasDiampuList?: KelasDiampu[];
   guruList?: DataPengguna[];
   schoolProfile?: SchoolProfile;
+  tahunAjaranList?: MasterTahunAjaran[];
+  activeTahunAjaranId?: string;
+  onSetActiveTahunAjaran?: (id: string) => void;
+  onAddTahunAjaran?: (item: Omit<MasterTahunAjaran, 'id'>) => void;
+  onUpdateTahunAjaran?: (id: string, item: Partial<MasterTahunAjaran>) => void;
+  onDeleteTahunAjaran?: (id: string) => void;
   onAddKlasifikasi?: (item: Omit<MasterKlasifikasi, 'id'>) => void;
+  onUpdateKlasifikasi?: (id: string, item: Partial<MasterKlasifikasi>) => void;
   onDeleteKlasifikasi?: (id: string) => void;
   onAddInstansi?: (item: Omit<MasterInstansi, 'id'>) => void;
   onDeleteInstansi?: (id: string) => void;
@@ -41,7 +50,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   kelasDiampuList = [],
   guruList = [],
   schoolProfile,
+  tahunAjaranList = [],
+  activeTahunAjaranId = '',
+  onSetActiveTahunAjaran,
+  onAddTahunAjaran,
+  onUpdateTahunAjaran,
+  onDeleteTahunAjaran,
   onAddKlasifikasi,
+  onUpdateKlasifikasi,
   onDeleteKlasifikasi,
   onAddInstansi,
   onDeleteInstansi,
@@ -54,7 +70,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   onUpdateKelasDiampu,
   onDeleteKelasDiampu,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'kelas' | 'kelas-diampu' | 'klasifikasi' | 'instansi' | 'pejabat'>('kelas');
+  const [activeSubTab, setActiveSubTab] = useState<'tahun-ajaran' | 'kelas' | 'kelas-diampu' | 'klasifikasi' | 'instansi' | 'pejabat'>('tahun-ajaran');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingKelasId, setEditingKelasId] = useState<string | null>(null);
 
@@ -63,9 +79,13 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const [filterTingkat, setFilterTingkat] = useState<number | 'semua'>('semua');
 
   // Form states for Klasifikasi
+  const [editingKlasifikasiId, setEditingKlasifikasiId] = useState<string | null>(null);
   const [kodeKlasifikasi, setKodeKlasifikasi] = useState('');
   const [namaKlasifikasi, setNamaKlasifikasi] = useState('');
   const [ketKlasifikasi, setKetKlasifikasi] = useState('');
+  const [pjUserId, setPjUserId] = useState('');
+  const [pjUserNama, setPjUserNama] = useState('');
+  const [pjUserJabatan, setPjUserJabatan] = useState('');
 
   // Form states for Instansi
   const [namaInstansi, setNamaInstansi] = useState('');
@@ -124,6 +144,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   // Handle open add modal
   const handleOpenAdd = () => {
     setEditingKelasId(null);
+    setEditingKlasifikasiId(null);
     if (activeSubTab === 'kelas') {
       setNamaKelas('');
       setTingkatKelas(1);
@@ -136,7 +157,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       setRuanganKelas('');
       setFaseKurikulum('Fase A');
       setKeteranganKelas('');
+    } else if (activeSubTab === 'klasifikasi') {
+      setKodeKlasifikasi('');
+      setNamaKlasifikasi('');
+      setKetKlasifikasi('');
+      setPjUserId('');
+      setPjUserNama('');
+      setPjUserJabatan('');
     }
+    setShowAddModal(true);
+  };
+
+  // Handle open edit modal for Klasifikasi
+  const handleEditKlasifikasi = (item: MasterKlasifikasi) => {
+    setEditingKlasifikasiId(item.id);
+    setKodeKlasifikasi(item.kode);
+    setNamaKlasifikasi(item.nama);
+    setKetKlasifikasi(item.keterangan || '');
+    setPjUserId(item.penanggungJawabId || '');
+    setPjUserNama(item.penanggungJawabNama || '');
+    setPjUserJabatan(item.penanggungJawabJabatan || '');
     setShowAddModal(true);
   };
 
@@ -221,10 +261,28 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
 
     if (activeSubTab === 'klasifikasi') {
       if (!kodeKlasifikasi || !namaKlasifikasi) return;
-      onAddKlasifikasi?.({ kode: kodeKlasifikasi, nama: namaKlasifikasi, keterangan: ketKlasifikasi });
+      const payload: Omit<MasterKlasifikasi, 'id'> = {
+        kode: kodeKlasifikasi.trim(),
+        nama: namaKlasifikasi.trim(),
+        keterangan: ketKlasifikasi.trim(),
+        penanggungJawabId: pjUserId || undefined,
+        penanggungJawabNama: pjUserNama || undefined,
+        penanggungJawabJabatan: pjUserJabatan || undefined,
+      };
+
+      if (editingKlasifikasiId) {
+        onUpdateKlasifikasi?.(editingKlasifikasiId, payload);
+      } else {
+        onAddKlasifikasi?.(payload);
+      }
+
       setKodeKlasifikasi('');
       setNamaKlasifikasi('');
       setKetKlasifikasi('');
+      setPjUserId('');
+      setPjUserNama('');
+      setPjUserJabatan('');
+      setEditingKlasifikasiId(null);
     } else if (activeSubTab === 'instansi') {
       if (!namaInstansi) return;
       onAddInstansi?.({ nama: namaInstansi, alamat: alamatInstansi, telepon: telpInstansi, kategori: kategoriInstansi });
@@ -267,6 +325,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       <div className="bg-white border border-[#c6c6cd] rounded-xl p-3 sm:p-4 shadow-xs flex flex-col gap-3">
         <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">
           <div className="flex bg-[#f2f4f6] p-1 rounded-lg gap-1 overflow-x-auto">
+            <button
+              id="subtab-tahun-ajaran"
+              onClick={() => setActiveSubTab('tahun-ajaran')}
+              className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeSubTab === 'tahun-ajaran'
+                  ? 'bg-white text-[#006f66] shadow-xs'
+                  : 'text-[#45464d] hover:text-black'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+              Tahun Ajaran ({tahunAjaranList.length})
+            </button>
             <button
               id="subtab-kelas"
               onClick={() => setActiveSubTab('kelas')}
@@ -329,7 +399,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
             </button>
           </div>
 
-          {activeSubTab !== 'kelas-diampu' && (
+          {activeSubTab !== 'kelas-diampu' && activeSubTab !== 'tahun-ajaran' && (
             <button
               id="btn-add-master-data"
               onClick={handleOpenAdd}
@@ -349,7 +419,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
 
         {/* Subtab Description */}
         <p className="text-xs text-[#76777d]">
-          {activeSubTab === 'kelas'
+          {activeSubTab === 'tahun-ajaran'
+            ? 'Basis data master Tahun Ajaran & kalender pendidikan sekolah. Menentukan tahun ajaran acuan aktif di seluruh modul sistem.'
+            : activeSubTab === 'kelas'
             ? 'Kelola master database kelas & rombongan belajar (rombel), data wali kelas, nomor ruangan, dan sebaran peserta didik sekolah.'
             : activeSubTab === 'kelas-diampu'
             ? 'Basis data penugasan mengajar guru: daftar kelas/rombel yang diampu, mata pelajaran, beban jam pelajaran (JP), dan jadwal mengajar.'
@@ -456,6 +528,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         </div>
       )}
 
+      {/* TAHUN AJARAN VIEW */}
+      {activeSubTab === 'tahun-ajaran' && (
+        <TahunAjaranTab
+          tahunAjaranList={tahunAjaranList}
+          activeTahunAjaranId={activeTahunAjaranId}
+          onSetActiveTahunAjaran={onSetActiveTahunAjaran || (() => {})}
+          onAddTahunAjaran={onAddTahunAjaran || (() => {})}
+          onUpdateTahunAjaran={onUpdateTahunAjaran || (() => {})}
+          onDeleteTahunAjaran={onDeleteTahunAjaran || (() => {})}
+        />
+      )}
+
       {/* KELAS YANG DIAMPU VIEW */}
       {activeSubTab === 'kelas-diampu' && (
         <KelasDiampuTab
@@ -470,7 +554,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       )}
 
       {/* MAIN TABLE WRAPPER FOR OTHER SUBTABS */}
-      {activeSubTab !== 'kelas-diampu' && (
+      {activeSubTab !== 'kelas-diampu' && activeSubTab !== 'tahun-ajaran' && (
         <div className="bg-white border border-[#c6c6cd] rounded-xl overflow-hidden shadow-xs">
           <ResponsiveTableWrapper id="master-data-table-scroll" minWidth="min-w-[760px]">
             {/* 1. TABLE KELAS */}
@@ -593,8 +677,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#f2f4f6] border-b border-[#c6c6cd]">
                 <tr>
-                  <th className="py-3 px-4 text-xs font-bold text-[#45464d] uppercase w-28">Kode</th>
+                  <th className="py-3 px-4 text-xs font-bold text-[#45464d] uppercase w-24">Kode</th>
                   <th className="py-3 px-4 text-xs font-bold text-[#45464d] uppercase">Nama Klasifikasi</th>
+                  <th className="py-3 px-4 text-xs font-bold text-[#45464d] uppercase">Penanggung Jawab (Database Pengguna)</th>
                   <th className="py-3 px-4 text-xs font-bold text-[#45464d] uppercase">Keterangan</th>
                   <th className="py-3 px-4 text-xs font-bold text-[#45464d] uppercase text-center w-24">Aksi</th>
                 </tr>
@@ -604,19 +689,46 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   <tr key={item.id} className="hover:bg-[#f7f9fb]">
                     <td className="py-3.5 px-4 font-bold text-[#006a61]">{item.kode}</td>
                     <td className="py-3.5 px-4 font-semibold text-black">{item.nama}</td>
-                    <td className="py-3.5 px-4 text-[#45464d] text-xs">{item.keterangan}</td>
+                    <td className="py-3.5 px-4">
+                      {item.penanggungJawabNama ? (
+                        <div>
+                          <span className="font-bold text-black text-xs block flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px] text-[#006a61]">person</span>
+                            {item.penanggungJawabNama}
+                          </span>
+                          {item.penanggungJawabJabatan && (
+                            <span className="text-[11px] text-[#76777d] block pl-4.5">
+                              {item.penanggungJawabJabatan}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#76777d] italic">Belum ditentukan</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-[#45464d] text-xs">{item.keterangan || '-'}</td>
                     <td className="py-2.5 px-3 text-center">
-                      <button
-                        onClick={() => {
-                          if (confirm(`Hapus klasifikasi ${item.kode}?`)) {
-                            onDeleteKlasifikasi?.(item.id);
-                          }
-                        }}
-                        className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded cursor-pointer"
-                        title="Hapus"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">delete</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          id={`btn-edit-klasifikasi-${item.id}`}
+                          onClick={() => handleEditKlasifikasi(item)}
+                          className="p-1 text-[#006a61] hover:bg-[#86f2e4]/30 rounded transition-colors cursor-pointer"
+                          title="Edit Klasifikasi"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Hapus klasifikasi ${item.kode}?`)) {
+                              onDeleteKlasifikasi?.(item.id);
+                            }
+                          }}
+                          className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded transition-colors cursor-pointer"
+                          title="Hapus"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -716,7 +828,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     ? 'Edit Data Kelas / Rombel'
                     : 'Tambah Kelas / Rombel Baru'
                   : activeSubTab === 'klasifikasi'
-                  ? 'Tambah Kode Klasifikasi'
+                  ? editingKlasifikasiId
+                    ? 'Edit Kode Klasifikasi'
+                    : 'Tambah Kode Klasifikasi'
                   : activeSubTab === 'instansi'
                   ? 'Tambah Instansi / Mitra'
                   : 'Tambah Staf / Pejabat'}
@@ -922,7 +1036,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
               {activeSubTab === 'klasifikasi' && (
                 <>
                   <div>
-                    <label className="block text-xs font-bold text-[#45464d] mb-1">Kode Klasifikasi (cth: 421)</label>
+                    <label className="block text-xs font-bold text-[#45464d] mb-1">Kode Klasifikasi (cth: 421) <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       required
@@ -933,7 +1047,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#45464d] mb-1">Nama Klasifikasi</label>
+                    <label className="block text-xs font-bold text-[#45464d] mb-1">Nama Klasifikasi <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       required
@@ -942,6 +1056,38 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       placeholder="e.g. Kurikulum & Asesmen"
                       className="w-full border border-[#c6c6cd] rounded p-2 text-sm input-focus-glow"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#45464d] mb-1 flex items-center justify-between">
+                      <span>Penanggung Jawab / GTK Terkait (Database Pengguna)</span>
+                      <span className="text-[10px] text-[#76777d] font-normal">Opsional</span>
+                    </label>
+                    <select
+                      value={pjUserId}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        setPjUserId(selectedId);
+                        const selectedUser = (guruList || []).find((g) => g.id === selectedId);
+                        if (selectedUser) {
+                          setPjUserNama(selectedUser.nama);
+                          setPjUserJabatan(selectedUser.jabatan);
+                        } else {
+                          setPjUserNama('');
+                          setPjUserJabatan('');
+                        }
+                      }}
+                      className="w-full border border-[#c6c6cd] rounded p-2 text-sm input-focus-glow bg-white"
+                    >
+                      <option value="">-- Pilih GTK / Pegawai Penanggung Jawab --</option>
+                      {(guruList || []).map((guru) => (
+                        <option key={guru.id} value={guru.id}>
+                          {guru.nama} - {guru.jabatan} ({guru.role})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-[#76777d] mt-1 block">
+                      Menghubungkan klasifikasi dengan staf/guru yang berwenang menindaklanjuti urusan ini.
+                    </span>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[#45464d] mb-1">Keterangan</label>
@@ -1061,7 +1207,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   type="submit"
                   className="px-4 py-2 bg-[#006a61] text-white rounded text-xs font-bold hover:bg-[#006a61]/90 cursor-pointer shadow-xs"
                 >
-                  {activeSubTab === 'kelas' && editingKelasId ? 'Perbarui Kelas' : 'Simpan Data'}
+                  {activeSubTab === 'kelas' && editingKelasId
+                    ? 'Perbarui Kelas'
+                    : activeSubTab === 'klasifikasi' && editingKlasifikasiId
+                    ? 'Perbarui Klasifikasi'
+                    : 'Simpan Data'}
                 </button>
               </div>
             </form>

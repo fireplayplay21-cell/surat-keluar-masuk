@@ -12,6 +12,7 @@ import {
   MasterKlasifikasi,
   MasterInstansi,
   MasterPejabat,
+  MasterTahunAjaran,
   MasterKelas,
   KelasDiampu,
   SchoolProfile,
@@ -25,6 +26,7 @@ import {
   INITIAL_KLASIFIKASI,
   INITIAL_INSTANSI,
   INITIAL_PEJABAT,
+  INITIAL_TAHUN_AJARAN,
   INITIAL_KELAS,
   INITIAL_KELAS_DIAMPU,
   INITIAL_SCHOOL_PROFILE,
@@ -41,6 +43,10 @@ import {
   savePenggunaToFirestore,
   deletePenggunaFromFirestore,
   saveKlasifikasiToFirestore,
+  deleteKlasifikasiFromFirestore,
+  saveTahunAjaranToFirestore,
+  setActiveTahunAjaranInFirestore,
+  deleteTahunAjaranFromFirestore,
   saveKelasToFirestore,
   deleteKelasFromFirestore,
   saveKelasDiampuToFirestore,
@@ -122,6 +128,15 @@ export default function App() {
     const saved = localStorage.getItem('sdn01_kelas_diampu');
     return saved ? JSON.parse(saved) : INITIAL_KELAS_DIAMPU;
   });
+
+  const [tahunAjaranList, setTahunAjaranList] = useState<MasterTahunAjaran[]>(() => {
+    const saved = localStorage.getItem('sdn01_tahun_ajaran');
+    return saved ? JSON.parse(saved) : INITIAL_TAHUN_AJARAN;
+  });
+
+  const activeTahunAjaran = useMemo(() => {
+    return tahunAjaranList.find((ta) => ta.isAktif) || tahunAjaranList[0];
+  }, [tahunAjaranList]);
 
   const [schoolProfile, setSchoolProfile] = useState<SchoolProfile>(() => {
     const saved = localStorage.getItem('sdn01_profile');
@@ -222,6 +237,10 @@ export default function App() {
   }, [kelasDiampuList]);
 
   useEffect(() => {
+    localStorage.setItem('sdn01_tahun_ajaran', JSON.stringify(tahunAjaranList));
+  }, [tahunAjaranList]);
+
+  useEffect(() => {
     localStorage.setItem('sdn01_profile', JSON.stringify(schoolProfile));
   }, [schoolProfile]);
 
@@ -237,7 +256,8 @@ export default function App() {
       INITIAL_KLASIFIKASI,
       INITIAL_SCHOOL_PROFILE,
       INITIAL_KELAS,
-      INITIAL_KELAS_DIAMPU
+      INITIAL_KELAS_DIAMPU,
+      INITIAL_TAHUN_AJARAN
     ).catch((e) => {
       console.warn('Seeding check:', e);
     });
@@ -373,6 +393,23 @@ export default function App() {
       }
     );
 
+    // 8. Subscribe to Tahun Ajaran
+    const unsubTahunAjaran = onSnapshot(
+      collection(db, COLLECTIONS.TAHUN_AJARAN),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: MasterTahunAjaran[] = [];
+          snapshot.forEach((doc) => {
+            list.push({ ...doc.data(), id: doc.id } as MasterTahunAjaran);
+          });
+          setTahunAjaranList(list);
+        }
+      },
+      (error) => {
+        console.warn('Firestore tahun_ajaran listener notice:', error.message);
+      }
+    );
+
     return () => {
       unsubSuratMasuk();
       unsubSuratKeluar();
@@ -381,6 +418,7 @@ export default function App() {
       unsubProfile();
       unsubKelas();
       unsubKelasDiampu();
+      unsubTahunAjaran();
     };
   }, []);
 
@@ -614,8 +652,83 @@ export default function App() {
     }
   };
 
-  const handleDeleteKlasifikasi = (id: string) => {
+  const handleUpdateKlasifikasi = async (id: string, item: Partial<MasterKlasifikasi>) => {
+    setKlasifikasiList((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, ...item } : k))
+    );
+    const existing = klasifikasiList.find((k) => k.id === id);
+    if (existing) {
+      const fullItem: MasterKlasifikasi = { ...existing, ...item };
+      try {
+        await saveKlasifikasiToFirestore(fullItem);
+      } catch (err) {
+        console.warn('Updated klasifikasi locally:', err);
+      }
+    }
+  };
+
+  const handleDeleteKlasifikasi = async (id: string) => {
     setKlasifikasiList((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteKlasifikasiFromFirestore(id);
+    } catch (err) {
+      console.warn('Deleted klasifikasi locally:', err);
+    }
+  };
+
+  const handleSetActiveTahunAjaran = async (id: string) => {
+    setTahunAjaranList((prev) =>
+      prev.map((ta) => ({
+        ...ta,
+        isAktif: ta.id === id,
+      }))
+    );
+    try {
+      await setActiveTahunAjaranInFirestore(tahunAjaranList, id);
+    } catch (err) {
+      console.warn('Set active tahun ajaran locally:', err);
+    }
+  };
+
+  const handleAddTahunAjaran = async (item: Omit<MasterTahunAjaran, 'id'>) => {
+    const fullItem: MasterTahunAjaran = { ...item, id: `ta-${Date.now()}` };
+    if (fullItem.isAktif) {
+      setTahunAjaranList((prev) => [
+        fullItem,
+        ...prev.map((ta) => ({ ...ta, isAktif: false })),
+      ]);
+    } else {
+      setTahunAjaranList((prev) => [fullItem, ...prev]);
+    }
+    try {
+      await saveTahunAjaranToFirestore(fullItem);
+    } catch (err) {
+      console.warn('Saved tahun ajaran locally:', err);
+    }
+  };
+
+  const handleUpdateTahunAjaran = async (id: string, item: Partial<MasterTahunAjaran>) => {
+    setTahunAjaranList((prev) =>
+      prev.map((ta) => (ta.id === id ? { ...ta, ...item } : item.isAktif ? { ...ta, isAktif: false } : ta))
+    );
+    const existing = tahunAjaranList.find((ta) => ta.id === id);
+    if (existing) {
+      const fullItem: MasterTahunAjaran = { ...existing, ...item };
+      try {
+        await saveTahunAjaranToFirestore(fullItem);
+      } catch (err) {
+        console.warn('Updated tahun ajaran locally:', err);
+      }
+    }
+  };
+
+  const handleDeleteTahunAjaran = async (id: string) => {
+    setTahunAjaranList((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteTahunAjaranFromFirestore(id);
+    } catch (err) {
+      console.warn('Deleted tahun ajaran locally:', err);
+    }
   };
 
   const handleAddInstansi = (item: Omit<MasterInstansi, 'id'>) => {
@@ -930,7 +1043,14 @@ export default function App() {
             kelasDiampuList={kelasDiampuList}
             guruList={penggunaList}
             schoolProfile={schoolProfile}
+            tahunAjaranList={tahunAjaranList}
+            activeTahunAjaranId={activeTahunAjaran?.id}
+            onSetActiveTahunAjaran={handleSetActiveTahunAjaran}
+            onAddTahunAjaran={handleAddTahunAjaran}
+            onUpdateTahunAjaran={handleUpdateTahunAjaran}
+            onDeleteTahunAjaran={handleDeleteTahunAjaran}
             onAddKlasifikasi={handleAddKlasifikasi}
+            onUpdateKlasifikasi={handleUpdateKlasifikasi}
             onDeleteKlasifikasi={handleDeleteKlasifikasi}
             onAddInstansi={handleAddInstansi}
             onDeleteInstansi={handleDeleteInstansi}
@@ -991,6 +1111,7 @@ export default function App() {
         nextAgendaNumber={nextSuratKeluarAgenda}
         currentUser={currentUser}
         penggunaList={penggunaList}
+        tahunAjaranList={tahunAjaranList}
       />
 
       <ModalDataPengguna
@@ -1051,6 +1172,7 @@ export default function App() {
         suratMasukList={suratMasukList}
         suratKeluarList={suratKeluarList}
         schoolProfile={schoolProfile}
+        tahunAjaranList={tahunAjaranList}
       />
 
       <ModalHelp

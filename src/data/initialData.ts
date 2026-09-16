@@ -4,6 +4,7 @@ import {
   MasterKlasifikasi,
   MasterInstansi,
   MasterPejabat,
+  MasterTahunAjaran,
   MasterKelas,
   KelasDiampu,
   SchoolProfile,
@@ -268,14 +269,14 @@ export const INITIAL_SURAT_KELUAR: SuratKeluar[] = [
 ];
 
 export const INITIAL_KLASIFIKASI: MasterKlasifikasi[] = [
-  { id: 'kl-1', kode: '005', nama: 'Undangan', keterangan: 'Surat-surat mengenai undangan kedinasan, rapat, dan pertemuan' },
-  { id: 'kl-2', kode: '099', nama: 'Rapat & Notulensi', keterangan: 'Urusan persidangan, koordinasi K3S, PGRI, rapat dewan guru' },
-  { id: 'kl-3', kode: '420', nama: 'Pendidikan Umum', keterangan: 'Kebijakan pendidikan, kalender pendidikan nasional/daerah' },
-  { id: 'kl-4', kode: '421', nama: 'Sekolah & Kurikulum', keterangan: 'Kurikulum, silabus, asesmen, modul ajar, ANBK' },
-  { id: 'kl-5', kode: '422', nama: 'Kesiswaan & Komite', keterangan: 'Penerimaan siswa baru (PPDB), ekstrakurikuler, beasiswa, PIP' },
-  { id: 'kl-6', kode: '440', nama: 'Kesehatan Sekolah (UKS)', keterangan: 'Imunisasi BIAS, penjaringan kesehatan gigi dan mata, sanitasi' },
-  { id: 'kl-7', kode: '800', nama: 'Kepegawaian & Kinerja', keterangan: 'SKP, kenaikan pangkat, mutasi, cuti, sertifikasi guru' },
-  { id: 'kl-8', kode: '900', nama: 'Keuangan & BOS', keterangan: 'SPJ, ARKAS, Dana BOS, BOP, bantuan sarana pendidikan' },
+  { id: 'kl-1', kode: '005', nama: 'Undangan', keterangan: 'Surat-surat mengenai undangan kedinasan, rapat, dan pertemuan', penanggungJawabId: 'usr-2', penanggungJawabNama: 'Budi Santoso, S.AP.', penanggungJawabJabatan: 'Kepala Urusan Tata Usaha' },
+  { id: 'kl-2', kode: '099', nama: 'Rapat & Notulensi', keterangan: 'Urusan persidangan, koordinasi K3S, PGRI, rapat dewan guru', penanggungJawabId: 'usr-2', penanggungJawabNama: 'Budi Santoso, S.AP.', penanggungJawabJabatan: 'Kepala Urusan Tata Usaha' },
+  { id: 'kl-3', kode: '420', nama: 'Pendidikan Umum', keterangan: 'Kebijakan pendidikan, kalender pendidikan nasional/daerah', penanggungJawabId: 'usr-1', penanggungJawabNama: 'Ampena, S., S.Pd', penanggungJawabJabatan: 'Kepala Sekolah' },
+  { id: 'kl-4', kode: '421', nama: 'Sekolah & Kurikulum', keterangan: 'Kurikulum, silabus, asesmen, modul ajar, ANBK', penanggungJawabId: 'usr-3', penanggungJawabNama: 'Siti Rahayu, S.Pd., M.Si.', penanggungJawabJabatan: 'Wakil Kepala Urusan Kurikulum' },
+  { id: 'kl-5', kode: '422', nama: 'Kesiswaan & Komite', keterangan: 'Penerimaan siswa baru (PPDB), ekstrakurikuler, beasiswa, PIP', penanggungJawabId: 'usr-4', penanggungJawabNama: 'Ahmad Fauzi, S.Pd.', penanggungJawabJabatan: 'Wakil Kepala Urusan Kesiswaan' },
+  { id: 'kl-6', kode: '440', nama: 'Kesehatan Sekolah (UKS)', keterangan: 'Imunisasi BIAS, penjaringan kesehatan gigi dan mata, sanitasi', penanggungJawabId: 'usr-12', penanggungJawabNama: 'Bayu Pratama, S.Pd.Jas', penanggungJawabJabatan: 'Guru PJOK & Pembina Olahraga' },
+  { id: 'kl-7', kode: '800', nama: 'Kepegawaian & Kinerja', keterangan: 'SKP, kenaikan pangkat, mutasi, cuti, sertifikasi guru', penanggungJawabId: 'usr-2', penanggungJawabNama: 'Budi Santoso, S.AP.', penanggungJawabJabatan: 'Kepala Urusan Tata Usaha' },
+  { id: 'kl-8', kode: '900', nama: 'Keuangan & BOS', keterangan: 'SPJ, ARKAS, Dana BOS, BOP, bantuan sarana pendidikan', penanggungJawabId: 'usr-13', penanggungJawabNama: 'Dewi Lestari, S.E.', penanggungJawabJabatan: 'Bendahara BOS & Pengelola Keuangan' },
 ];
 
 export const INITIAL_INSTANSI: MasterInstansi[] = [
@@ -999,4 +1000,44 @@ export const INITIAL_KELAS_DIAMPU: KelasDiampu[] = [
     status: 'Aktif',
   },
 ];
+
+export const INITIAL_TAHUN_AJARAN: MasterTahunAjaran[] = [
+  {
+    id: 'ta-2026-2027',
+    tahun: '2026/2027',
+    semesterAktif: 'Ganjil',
+    isAktif: true,
+    tglMulai: '2026-07-13',
+    tglSelesai: '2027-06-25',
+    keterangan: 'Tahun Ajaran Berjalan (Kurikulum Merdeka Mandiri Berbagi)',
+  },
+  {
+    id: 'ta-2025-2026',
+    tahun: '2025/2026',
+    semesterAktif: 'Genap',
+    isAktif: false,
+    tglMulai: '2025-07-14',
+    tglSelesai: '2026-06-26',
+    keterangan: 'Tahun Ajaran Sebelumnya',
+  },
+  {
+    id: 'ta-2024-2025',
+    tahun: '2024/2025',
+    semesterAktif: 'Genap',
+    isAktif: false,
+    tglMulai: '2024-07-15',
+    tglSelesai: '2025-06-27',
+    keterangan: 'Arsip Tahun Ajaran',
+  },
+  {
+    id: 'ta-2023-2024',
+    tahun: '2023/2024',
+    semesterAktif: 'Genap',
+    isAktif: false,
+    tglMulai: '2023-07-17',
+    tglSelesai: '2024-06-28',
+    keterangan: 'Arsip Data Awal Sistem Persuratan',
+  },
+];
+
 

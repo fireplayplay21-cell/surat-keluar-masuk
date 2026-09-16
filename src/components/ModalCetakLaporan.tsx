@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SuratMasuk, SuratKeluar, SchoolProfile } from '../types';
+import React, { useState, useMemo } from 'react';
+import { SuratMasuk, SuratKeluar, SchoolProfile, MasterTahunAjaran } from '../types';
 import { LOGO_URL } from './Sidebar';
 
 interface ModalCetakLaporanProps {
@@ -8,6 +8,7 @@ interface ModalCetakLaporanProps {
   suratMasukList: SuratMasuk[];
   suratKeluarList: SuratKeluar[];
   schoolProfile: SchoolProfile;
+  tahunAjaranList?: MasterTahunAjaran[];
 }
 
 export const ModalCetakLaporan: React.FC<ModalCetakLaporanProps> = ({
@@ -16,10 +17,44 @@ export const ModalCetakLaporan: React.FC<ModalCetakLaporanProps> = ({
   suratMasukList,
   suratKeluarList,
   schoolProfile,
+  tahunAjaranList = [],
 }) => {
+  const currentYearStr = String(new Date().getFullYear());
   const [tipeLaporan, setTipeLaporan] = useState<'masuk' | 'keluar'>('masuk');
   const [filterBulan, setFilterBulan] = useState<string>('all');
-  const [filterTahun, setFilterTahun] = useState<string>('2023');
+  const [filterTahun, setFilterTahun] = useState<string>(currentYearStr || '2026');
+
+  // Compute dynamic list of available years from database + letters present + default
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    tahunAjaranList.forEach((ta) => {
+      const match = ta.tahun.match(/\d{4}/g);
+      if (match) {
+        match.forEach((y) => yearsSet.add(y));
+      } else if (ta.tahun.trim()) {
+        yearsSet.add(ta.tahun.trim());
+      }
+    });
+
+    // Also collect years from existing surat masuk & keluar
+    suratMasukList.forEach((sm) => {
+      if (sm.tglTerima) {
+        const y = sm.tglTerima.substring(0, 4);
+        if (/\d{4}/.test(y)) yearsSet.add(y);
+      }
+    });
+    suratKeluarList.forEach((sk) => {
+      if (sk.tglSurat) {
+        const y = sk.tglSurat.substring(0, 4);
+        if (/\d{4}/.test(y)) yearsSet.add(y);
+      }
+    });
+
+    // Ensure baseline years
+    ['2023', '2024', '2025', '2026', '2027'].forEach((y) => yearsSet.add(y));
+
+    return Array.from(yearsSet).sort((a, b) => Number(b) - Number(a)); // Descending
+  }, [tahunAjaranList, suratMasukList, suratKeluarList]);
 
   if (!isOpen) return null;
 
@@ -121,10 +156,11 @@ export const ModalCetakLaporan: React.FC<ModalCetakLaporanProps> = ({
               onChange={(e) => setFilterTahun(e.target.value)}
               className="border border-[#c6c6cd] rounded p-1 bg-white"
             >
-              <option value="2023">2023</option>
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
             </select>
           </div>
         </div>

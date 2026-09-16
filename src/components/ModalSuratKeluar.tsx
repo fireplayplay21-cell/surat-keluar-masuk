@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   SuratKeluar,
   SifatSurat,
@@ -8,6 +8,7 @@ import {
   AppUser,
   DataPengguna,
   GoogleDriveAttachment,
+  MasterTahunAjaran,
 } from '../types';
 import {
   getDriveAuthStatus,
@@ -27,6 +28,7 @@ interface ModalSuratKeluarProps {
   nextAgendaNumber?: string;
   currentUser?: AppUser | null;
   penggunaList?: DataPengguna[];
+  tahunAjaranList?: MasterTahunAjaran[];
 }
 
 export const SATUAN_KERJA = 'UPTD SDN-MAWAS/MMJ';
@@ -46,7 +48,7 @@ export const BULAN_ROMAWI_OPTIONS = [
   { value: '12', roman: 'XII', name: 'Desember' },
 ];
 
-export const TAHUN_OPTIONS = [
+export const DEFAULT_TAHUN_OPTIONS = [
   '2023',
   '2024',
   '2025',
@@ -86,11 +88,29 @@ export const ModalSuratKeluar: React.FC<ModalSuratKeluarProps> = ({
   nextAgendaNumber,
   currentUser,
   penggunaList = [],
+  tahunAjaranList = [],
 }) => {
   const [noUrut, setNoUrut] = useState('163');
   const [kodeKlasifikasi, setKodeKlasifikasi] = useState('421');
   const [bulanRomawi, setBulanRomawi] = useState('IX');
   const [tahun, setTahun] = useState('2026');
+
+  // Compute dynamic years list from database (Master Tahun Ajaran) + defaults
+  const availableTahunList = useMemo(() => {
+    const yearsSet = new Set<string>();
+    tahunAjaranList.forEach((ta) => {
+      // Parse tahun like "2026/2027" or "2026"
+      const match = ta.tahun.match(/\d{4}/g);
+      if (match) {
+        match.forEach((y) => yearsSet.add(y));
+      } else if (ta.tahun.trim()) {
+        yearsSet.add(ta.tahun.trim());
+      }
+    });
+    // Add defaults
+    DEFAULT_TAHUN_OPTIONS.forEach((y) => yearsSet.add(y));
+    return Array.from(yearsSet).sort((a, b) => Number(a) - Number(b));
+  }, [tahunAjaranList]);
   const [noSurat, setNoSurat] = useState('421/163/UPTD SDN-MAWAS/MMJ/IX/2026');
   const [tglSurat, setTglSurat] = useState('');
   const [tujuan, setTujuan] = useState('');
@@ -616,7 +636,7 @@ export const ModalSuratKeluar: React.FC<ModalSuratKeluarProps> = ({
                   className="w-full border border-[#c6c6cd] rounded-lg p-2 text-xs bg-white font-bold text-[#006a61] input-focus-glow cursor-pointer text-center"
                   title="Sediakan dropdown tahun"
                 >
-                  {TAHUN_OPTIONS.map((th) => (
+                  {availableTahunList.map((th) => (
                     <option key={th} value={th}>
                       {th}
                     </option>

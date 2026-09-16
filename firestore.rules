@@ -34,6 +34,10 @@ service cloud.firestore {
     match /kelas_diampu/{id} {
       allow read, write: if true;
     }
+
+    match /tahun_ajaran/{id} {
+      allow read, write: if true;
+    }
   }
 }
 

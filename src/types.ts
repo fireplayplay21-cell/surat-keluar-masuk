@@ -78,6 +78,9 @@ export interface MasterKlasifikasi {
   kode: string;
   nama: string;
   keterangan: string;
+  penanggungJawabId?: string; // ID user dari database pengguna yang menjadi acuan utama
+  penanggungJawabNama?: string; // Nama GTK/Guru penanggung jawab
+  penanggungJawabJabatan?: string; // Jabatan atau peran GTK dari database pengguna
 }
 
 export interface MasterInstansi {
@@ -93,6 +96,16 @@ export interface MasterPejabat {
   nama: string;
   jabatan: string;
   nip: string;
+}
+
+export interface MasterTahunAjaran {
+  id: string;
+  tahun: string; // contoh: "2023/2024", "2024/2025", "2025/2026", "2026/2027"
+  semesterAktif: 'Ganjil' | 'Genap' | 'Sepanjang Tahun';
+  isAktif: boolean; // Menandakan apakah ini tahun ajaran yang sedang aktif di sistem
+  tglMulai?: string; // contoh: "2026-07-15"
+  tglSelesai?: string; // contoh: "2027-06-25"
+  keterangan?: string;
 }
 
 export interface MasterKelas {

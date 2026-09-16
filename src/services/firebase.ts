@@ -20,6 +20,7 @@ import {
   MasterKlasifikasi,
   MasterKelas,
   KelasDiampu,
+  MasterTahunAjaran,
   SchoolProfile,
 } from '../types';
 
@@ -109,6 +110,7 @@ export const COLLECTIONS = {
   MASTER_KLASIFIKASI: 'master_klasifikasi',
   KELAS: 'kelas',
   KELAS_DIAMPU: 'kelas_diampu',
+  TAHUN_AJARAN: 'tahun_ajaran',
   SCHOOL_PROFILE: 'school_profile',
 } as const;
 
@@ -234,6 +236,16 @@ export async function saveKlasifikasiToFirestore(item: MasterKlasifikasi): Promi
   }
 }
 
+export async function deleteKlasifikasiFromFirestore(id: string): Promise<void> {
+  const path = `${COLLECTIONS.MASTER_KLASIFIKASI}/${id}`;
+  try {
+    const docRef = doc(db, COLLECTIONS.MASTER_KLASIFIKASI, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    throw handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 // -------------------------------------------------------------
 // DATABASE KELAS & ROMBEL CRUD
 // -------------------------------------------------------------
@@ -279,6 +291,48 @@ export async function deleteKelasDiampuFromFirestore(id: string): Promise<void> 
 }
 
 // -------------------------------------------------------------
+// DATABASE TAHUN AJARAN CRUD
+// -------------------------------------------------------------
+export async function saveTahunAjaranToFirestore(item: MasterTahunAjaran): Promise<void> {
+  const path = `${COLLECTIONS.TAHUN_AJARAN}/${item.id}`;
+  try {
+    const docRef = doc(db, COLLECTIONS.TAHUN_AJARAN, item.id);
+    await setDoc(docRef, sanitizeDoc(item), { merge: true });
+  } catch (error) {
+    throw handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function setActiveTahunAjaranInFirestore(
+  allTahunAjaran: MasterTahunAjaran[],
+  activeId: string
+): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    allTahunAjaran.forEach((ta) => {
+      const isAktif = ta.id === activeId;
+      batch.set(
+        doc(db, COLLECTIONS.TAHUN_AJARAN, ta.id),
+        sanitizeDoc({ ...ta, isAktif }),
+        { merge: true }
+      );
+    });
+    await batch.commit();
+  } catch (error) {
+    throw handleFirestoreError(error, OperationType.WRITE, COLLECTIONS.TAHUN_AJARAN);
+  }
+}
+
+export async function deleteTahunAjaranFromFirestore(id: string): Promise<void> {
+  const path = `${COLLECTIONS.TAHUN_AJARAN}/${id}`;
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.TAHUN_AJARAN, id));
+  } catch (error) {
+    throw handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+// -------------------------------------------------------------
 // INITIAL SEEDING HELPER
 // -------------------------------------------------------------
 export async function seedInitialDataIfEmpty(
@@ -288,7 +342,8 @@ export async function seedInitialDataIfEmpty(
   initialKlasifikasi: MasterKlasifikasi[],
   initialProfile: SchoolProfile,
   initialKelas?: MasterKelas[],
-  initialKelasDiampu?: KelasDiampu[]
+  initialKelasDiampu?: KelasDiampu[],
+  initialTahunAjaran?: MasterTahunAjaran[]
 ): Promise<boolean> {
   try {
     const snap = await getDocs(collection(db, COLLECTIONS.SURAT_MASUK));
@@ -315,6 +370,18 @@ export async function seedInitialDataIfEmpty(
           });
           await batch.commit();
           console.log('Seeding initial kelas_diampu data to Firestore completed.');
+        }
+      }
+      // Check if tahun_ajaran collection is empty and needs initial seeding
+      if (initialTahunAjaran && initialTahunAjaran.length > 0) {
+        const taSnap = await getDocs(collection(db, COLLECTIONS.TAHUN_AJARAN));
+        if (taSnap.empty) {
+          const batch = writeBatch(db);
+          initialTahunAjaran.forEach((ta) => {
+            batch.set(doc(db, COLLECTIONS.TAHUN_AJARAN, ta.id), sanitizeDoc(ta));
+          });
+          await batch.commit();
+          console.log('Seeding initial tahun_ajaran data to Firestore completed.');
         }
       }
       return false; // already has main data
@@ -345,6 +412,11 @@ export async function seedInitialDataIfEmpty(
         batch.set(doc(db, COLLECTIONS.KELAS_DIAMPU, kd.id), sanitizeDoc(kd));
       });
     }
+    if (initialTahunAjaran && initialTahunAjaran.length > 0) {
+      initialTahunAjaran.forEach((ta) => {
+        batch.set(doc(db, COLLECTIONS.TAHUN_AJARAN, ta.id), sanitizeDoc(ta));
+      });
+    }
     batch.set(doc(db, COLLECTIONS.SCHOOL_PROFILE, 'main_profile'), sanitizeDoc(initialProfile));
 
     await batch.commit();
@@ -366,6 +438,7 @@ export interface FirestoreSyncSummary {
   klasifikasiCount: number;
   kelasCount: number;
   kelasDiampuCount: number;
+  tahunAjaranCount: number;
   schoolProfileSynced: boolean;
   syncedAt: string;
 }
@@ -377,7 +450,8 @@ export async function forceSyncAllCollectionsToFirestore(
   klasifikasiList: MasterKlasifikasi[],
   schoolProfile: SchoolProfile,
   kelasList?: MasterKelas[],
-  kelasDiampuList?: KelasDiampu[]
+  kelasDiampuList?: KelasDiampu[],
+  tahunAjaranList?: MasterTahunAjaran[]
 ): Promise<FirestoreSyncSummary> {
   const batch = writeBatch(db);
 
@@ -419,6 +493,12 @@ export async function forceSyncAllCollectionsToFirestore(
     });
   }
 
+  if (tahunAjaranList && tahunAjaranList.length > 0) {
+    tahunAjaranList.forEach((ta) => {
+      batch.set(doc(db, COLLECTIONS.TAHUN_AJARAN, ta.id), sanitizeDoc(ta), { merge: true });
+    });
+  }
+
   batch.set(doc(db, COLLECTIONS.SCHOOL_PROFILE, 'main_profile'), sanitizeDoc(schoolProfile), { merge: true });
 
   await batch.commit();
@@ -430,6 +510,7 @@ export async function forceSyncAllCollectionsToFirestore(
     klasifikasiCount: klasifikasiList.length,
     kelasCount: kelasList?.length || 0,
     kelasDiampuCount: kelasDiampuList?.length || 0,
+    tahunAjaranCount: tahunAjaranList?.length || 0,
     schoolProfileSynced: true,
     syncedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   };
