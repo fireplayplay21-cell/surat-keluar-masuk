@@ -11,6 +11,7 @@ import {
 import { LOGO_URL } from './Sidebar';
 import {
   getDriveAuthStatus,
+  getOrFetchDriveToken,
   connectGoogleDrive,
   disconnectGoogleDrive,
   DriveAuthStatus,
@@ -69,7 +70,12 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   const [selectedCollection, setSelectedCollection] = useState<string>('surat_masuk');
 
   useEffect(() => {
+    // Initial status
     setDriveStatus(getDriveAuthStatus());
+    // Also try fetching from cloud if not present locally
+    getOrFetchDriveToken().then(() => {
+      setDriveStatus(getDriveAuthStatus());
+    });
   }, []);
 
   const handleChange = (field: keyof SchoolProfile, value: string) => {
@@ -99,11 +105,11 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     }
   };
 
-  const handleDisconnectDrive = () => {
-    if (window.confirm('Putuskan koneksi Google Drive pada peramban ini?')) {
-      disconnectGoogleDrive();
+  const handleDisconnectDrive = async () => {
+    if (window.confirm('Putuskan koneksi Google Drive bersama untuk seluruh perangkat dan pengguna?')) {
+      await disconnectGoogleDrive();
       setDriveStatus(getDriveAuthStatus());
-      setDriveMsg('Koneksi Google Drive telah diputuskan.');
+      setDriveMsg('Koneksi Google Drive bersama telah diputuskan.');
     }
   };
 
@@ -567,12 +573,12 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[#4285F4] text-[20px]">cloud_upload</span>
-                      <span className="font-bold text-black text-xs">Google Drive Storage</span>
+                      <span className="font-bold text-black text-xs">Penyimpanan Terpusat Google Drive</span>
                     </div>
                     {driveStatus.isConnected ? (
                       <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        Terhubung
+                        Terhubung Semua Perangkat
                       </span>
                     ) : (
                       <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
@@ -583,8 +589,8 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
 
                   <p className="text-[11px] text-[#45464d] mb-2">
                     {driveStatus.isConnected
-                      ? `Menyimpan scan PDF & foto ke folder 'Arsip Tata Usaha ${formData.namaSekolah}' akun ${driveStatus.userEmail || 'Google'}.`
-                      : 'Hubungkan akun Google Drive untuk menyimpan berkas scan PDF & foto surat masuk secara permanen.'}
+                      ? `Menyimpan otomatis seluruh scan PDF & foto dari semua perangkat pengguna ke Google Drive akun ${driveStatus.userEmail || 'Google'} di folder 'Arsip Tata Usaha ${formData.namaSekolah}'. Pengguna di perangkat lain tidak perlu login ulang.`
+                      : 'Cukup hubungkan sekali di sini. Seluruh perangkat dan pengguna lain dapat langsung mengunggah berkas foto/PDF ke Google Drive Anda tanpa perlu login lagi.'}
                   </p>
 
                   <div className="flex gap-2">
@@ -594,7 +600,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={handleDisconnectDrive}
                         className="w-full bg-white border border-[#c6c6cd] hover:border-red-300 text-red-600 font-bold py-1.5 rounded-lg text-xs cursor-pointer hover:bg-red-50 transition-colors"
                       >
-                        Putuskan Google Drive
+                        Putuskan Google Drive Bersama
                       </button>
                     ) : (
                       <button
@@ -608,7 +614,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         ) : (
                           <span className="material-symbols-outlined text-[16px]">link</span>
                         )}
-                        <span>Hubungkan Google Drive</span>
+                        <span>Hubungkan Google Drive Sekolah</span>
                       </button>
                     )}
                   </div>

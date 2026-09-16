@@ -10,6 +10,7 @@ import {
 } from '../types';
 import {
   getDriveAuthStatus,
+  getOrFetchDriveToken,
   connectGoogleDrive,
   uploadFileToGoogleDrive,
   DriveAuthStatus,
@@ -70,6 +71,9 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
     if (isOpen) {
       setDriveStatus(getDriveAuthStatus());
       setUploadError(null);
+      getOrFetchDriveToken().then(() => {
+        setDriveStatus(getDriveAuthStatus());
+      });
     }
   }, [isOpen]);
 

@@ -1,5 +1,7 @@
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { GoogleDriveAttachment } from '../types';
+import { db } from './firebase';
+import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 export const GOOGLE_DRIVE_CLIENT_ID =
   firebaseConfigJson.oAuthClientId ||
@@ -13,6 +15,10 @@ const TOKEN_EXPIRY_KEY = 'gdrive_token_expiry';
 const USER_EMAIL_KEY = 'gdrive_user_email';
 const USER_NAME_KEY = 'gdrive_user_name';
 
+// Cloud config document path in Firestore
+const DRIVE_CONFIG_COLLECTION = 'school_profile';
+const DRIVE_CONFIG_DOC_ID = 'gdrive_integration';
+
 export interface DriveAuthStatus {
   isConnected: boolean;
   userEmail: string | null;
@@ -22,26 +28,111 @@ export interface DriveAuthStatus {
 
 let tokenClientInstance: any = null;
 
-// Get stored access token if still valid
+// Memory cache for token from Firestore
+let cloudTokenCache: {
+  token: string;
+  expiresAt: number;
+  email: string | null;
+  name: string | null;
+} | null = null;
+
+// Realtime Firestore synchronization for Drive token across all devices
+if (typeof window !== 'undefined') {
+  try {
+    const docRef = doc(db, DRIVE_CONFIG_COLLECTION, DRIVE_CONFIG_DOC_ID);
+    onSnapshot(
+      docRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data && data.accessToken && data.expiresAt) {
+            cloudTokenCache = {
+              token: data.accessToken,
+              expiresAt: Number(data.expiresAt),
+              email: data.userEmail || null,
+              name: data.userName || null,
+            };
+            // Also sync to localStorage for immediate offline/fast load
+            localStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
+            localStorage.setItem(TOKEN_EXPIRY_KEY, String(data.expiresAt));
+            if (data.userEmail) localStorage.setItem(USER_EMAIL_KEY, data.userEmail);
+            if (data.userName) localStorage.setItem(USER_NAME_KEY, data.userName);
+          }
+        } else {
+          // If deleted from Firestore
+          cloudTokenCache = null;
+        }
+      },
+      (err) => {
+        console.warn('Firestore Drive sync notice:', err.message);
+      }
+    );
+  } catch (e) {
+    console.warn('Failed to attach realtime Firestore Drive listener:', e);
+  }
+}
+
+// Get stored access token if still valid (checks memory cache, localStorage, or Firestore)
 export function getStoredAccessToken(): string | null {
+  // 1. Check cloudTokenCache
+  if (cloudTokenCache && cloudTokenCache.token && Date.now() < cloudTokenCache.expiresAt) {
+    return cloudTokenCache.token;
+  }
+
+  // 2. Check localStorage
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  if (!token || !expiry) return null;
-
-  if (Date.now() > parseInt(expiry, 10)) {
+  if (token && expiry) {
+    if (Date.now() <= parseInt(expiry, 10)) {
+      return token;
+    }
     // Token expired
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
-    return null;
   }
-  return token;
+
+  return null;
+}
+
+// Asynchronously fetch token from Firestore if not yet loaded in memory
+export async function getOrFetchDriveToken(): Promise<string | null> {
+  const local = getStoredAccessToken();
+  if (local) return local;
+
+  try {
+    const docRef = doc(db, DRIVE_CONFIG_COLLECTION, DRIVE_CONFIG_DOC_ID);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data && data.accessToken && data.expiresAt) {
+        if (Date.now() <= Number(data.expiresAt)) {
+          cloudTokenCache = {
+            token: data.accessToken,
+            expiresAt: Number(data.expiresAt),
+            email: data.userEmail || null,
+            name: data.userName || null,
+          };
+          localStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
+          localStorage.setItem(TOKEN_EXPIRY_KEY, String(data.expiresAt));
+          if (data.userEmail) localStorage.setItem(USER_EMAIL_KEY, data.userEmail);
+          if (data.userName) localStorage.setItem(USER_NAME_KEY, data.userName);
+          return data.accessToken;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error fetching Drive token from Firestore:', err);
+  }
+  return null;
 }
 
 export function getDriveAuthStatus(): DriveAuthStatus {
   const token = getStoredAccessToken();
-  const email = localStorage.getItem(USER_EMAIL_KEY);
-  const name = localStorage.getItem(USER_NAME_KEY);
-  const expiryStr = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  const email = cloudTokenCache?.email || localStorage.getItem(USER_EMAIL_KEY);
+  const name = cloudTokenCache?.name || localStorage.getItem(USER_NAME_KEY);
+  const expiryStr = cloudTokenCache?.expiresAt
+    ? String(cloudTokenCache.expiresAt)
+    : localStorage.getItem(TOKEN_EXPIRY_KEY);
   const expiresAt = expiryStr ? parseInt(expiryStr, 10) : null;
 
   return {
@@ -52,11 +143,19 @@ export function getDriveAuthStatus(): DriveAuthStatus {
   };
 }
 
-export function disconnectGoogleDrive(): void {
+export async function disconnectGoogleDrive(): Promise<void> {
+  cloudTokenCache = null;
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem(TOKEN_EXPIRY_KEY);
   localStorage.removeItem(USER_EMAIL_KEY);
   localStorage.removeItem(USER_NAME_KEY);
+
+  try {
+    const docRef = doc(db, DRIVE_CONFIG_COLLECTION, DRIVE_CONFIG_DOC_ID);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn('Could not remove Drive token from Firestore:', err);
+  }
 }
 
 // Ensure Google Identity Services script is available
@@ -105,6 +204,8 @@ export async function connectGoogleDrive(): Promise<string> {
             localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
 
             // Fetch user profile via Drive About API (works directly with drive.file scope)
+            let userEmail: string | null = null;
+            let userName: string | null = null;
             try {
               const aboutRes = await fetch(
                 'https://www.googleapis.com/drive/v3/about?fields=user',
@@ -115,9 +216,11 @@ export async function connectGoogleDrive(): Promise<string> {
               if (aboutRes.ok) {
                 const aboutData = await aboutRes.json();
                 if (aboutData.user?.emailAddress) {
+                  userEmail = aboutData.user.emailAddress;
                   localStorage.setItem(USER_EMAIL_KEY, aboutData.user.emailAddress);
                 }
                 if (aboutData.user?.displayName) {
+                  userName = aboutData.user.displayName;
                   localStorage.setItem(USER_NAME_KEY, aboutData.user.displayName);
                 }
               } else {
@@ -130,12 +233,43 @@ export async function connectGoogleDrive(): Promise<string> {
                 );
                 if (userInfoRes.ok) {
                   const userInfo = await userInfoRes.json();
-                  if (userInfo.email) localStorage.setItem(USER_EMAIL_KEY, userInfo.email);
-                  if (userInfo.name) localStorage.setItem(USER_NAME_KEY, userInfo.name);
+                  if (userInfo.email) {
+                    userEmail = userInfo.email;
+                    localStorage.setItem(USER_EMAIL_KEY, userInfo.email);
+                  }
+                  if (userInfo.name) {
+                    userName = userInfo.name;
+                    localStorage.setItem(USER_NAME_KEY, userInfo.name);
+                  }
                 }
               }
             } catch (e) {
               console.warn('Could not fetch user profile info:', e);
+            }
+
+            // Sync token to Firestore so ALL other devices and users can upload directly to this Google Drive!
+            try {
+              cloudTokenCache = {
+                token,
+                expiresAt: expiryTime,
+                email: userEmail,
+                name: userName,
+              };
+              const docRef = doc(db, DRIVE_CONFIG_COLLECTION, DRIVE_CONFIG_DOC_ID);
+              await setDoc(
+                docRef,
+                {
+                  accessToken: token,
+                  expiresAt: expiryTime,
+                  userEmail: userEmail || 'Akun Google Drive Sekolah',
+                  userName: userName || 'Tata Usaha SDN Mawas',
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true }
+              );
+              console.log('Google Drive shared token saved to Firestore successfully.');
+            } catch (fsErr) {
+              console.warn('Could not save Drive token to Firestore:', fsErr);
             }
 
             resolve(token);
@@ -213,15 +347,16 @@ export async function uploadFileToGoogleDrive(
     uploaderName?: string;
   }
 ): Promise<GoogleDriveAttachment> {
-  let accessToken = getStoredAccessToken();
+  // First check memory/localStorage, then fetch from Firestore if needed
+  let accessToken = await getOrFetchDriveToken();
 
   if (!accessToken) {
-    // Attempt connecting
+    // If not found in Firestore either, prompt connect
     accessToken = await connectGoogleDrive();
   }
 
   if (!accessToken) {
-    throw new Error('Akses Google Drive belum diotorisasi. Silakan hubungkan akun Google Drive Anda.');
+    throw new Error('Akses Google Drive belum diotorisasi. Silakan hubungkan akun Google Drive penyimpanan sekolah di Pengaturan.');
   }
 
   // Determine target folder
