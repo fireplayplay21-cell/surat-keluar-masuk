@@ -15,6 +15,7 @@ import {
   getOrFetchDriveToken,
   connectGoogleDrive,
   uploadFileToGoogleDrive,
+  subscribeToDriveAuthStatus,
   DriveAuthStatus,
 } from '../services/googleDrive';
 
@@ -142,11 +143,11 @@ export const ModalSuratKeluar: React.FC<ModalSuratKeluarProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setDriveStatus(getDriveAuthStatus());
       setUploadError(null);
-      getOrFetchDriveToken().then(() => {
-        setDriveStatus(getDriveAuthStatus());
+      const unsubscribe = subscribeToDriveAuthStatus((status) => {
+        setDriveStatus(status);
       });
+      return () => unsubscribe();
     }
   }, [isOpen]);
 

@@ -36,6 +36,35 @@ let cloudTokenCache: {
   name: string | null;
 } | null = null;
 
+// Subscribers for Drive status changes
+type DriveStatusListener = (status: DriveAuthStatus) => void;
+const statusListeners: Set<DriveStatusListener> = new Set();
+
+function notifyStatusListeners() {
+  const currentStatus = getDriveAuthStatus();
+  statusListeners.forEach((listener) => {
+    try {
+      listener(currentStatus);
+    } catch (e) {
+      console.warn('Listener error:', e);
+    }
+  });
+}
+
+export function subscribeToDriveAuthStatus(callback: DriveStatusListener): () => void {
+  statusListeners.add(callback);
+  // Send initial status immediately
+  callback(getDriveAuthStatus());
+  // Also proactively fetch from cloud to ensure latest state
+  getOrFetchDriveToken().then(() => {
+    callback(getDriveAuthStatus());
+  });
+
+  return () => {
+    statusListeners.delete(callback);
+  };
+}
+
 // Realtime Firestore synchronization for Drive token across all devices
 if (typeof window !== 'undefined') {
   try {
@@ -45,22 +74,25 @@ if (typeof window !== 'undefined') {
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          if (data && data.accessToken && data.expiresAt) {
+          if (data && data.accessToken) {
+            const exp = data.expiresAt ? Number(data.expiresAt) : Date.now() + 365 * 24 * 60 * 60 * 1000;
             cloudTokenCache = {
               token: data.accessToken,
-              expiresAt: Number(data.expiresAt),
+              expiresAt: exp,
               email: data.userEmail || null,
               name: data.userName || null,
             };
             // Also sync to localStorage for immediate offline/fast load
             localStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
-            localStorage.setItem(TOKEN_EXPIRY_KEY, String(data.expiresAt));
+            localStorage.setItem(TOKEN_EXPIRY_KEY, String(exp));
             if (data.userEmail) localStorage.setItem(USER_EMAIL_KEY, data.userEmail);
             if (data.userName) localStorage.setItem(USER_NAME_KEY, data.userName);
+            notifyStatusListeners();
           }
         } else {
           // If deleted from Firestore
           cloudTokenCache = null;
+          notifyStatusListeners();
         }
       },
       (err) => {
@@ -72,23 +104,22 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Get stored access token if still valid (checks memory cache, localStorage, or Firestore)
+// Get stored access token (checks memory cache, localStorage, or Firestore)
 export function getStoredAccessToken(): string | null {
   // 1. Check cloudTokenCache
-  if (cloudTokenCache && cloudTokenCache.token && Date.now() < cloudTokenCache.expiresAt) {
-    return cloudTokenCache.token;
+  if (cloudTokenCache && cloudTokenCache.token) {
+    if (Date.now() < cloudTokenCache.expiresAt) {
+      return cloudTokenCache.token;
+    }
   }
 
   // 2. Check localStorage
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  if (token && expiry) {
-    if (Date.now() <= parseInt(expiry, 10)) {
+  if (token) {
+    if (!expiry || Date.now() <= parseInt(expiry, 10)) {
       return token;
     }
-    // Token expired
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
   }
 
   return null;
@@ -104,20 +135,20 @@ export async function getOrFetchDriveToken(): Promise<string | null> {
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const data = snap.data();
-      if (data && data.accessToken && data.expiresAt) {
-        if (Date.now() <= Number(data.expiresAt)) {
-          cloudTokenCache = {
-            token: data.accessToken,
-            expiresAt: Number(data.expiresAt),
-            email: data.userEmail || null,
-            name: data.userName || null,
-          };
-          localStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
-          localStorage.setItem(TOKEN_EXPIRY_KEY, String(data.expiresAt));
-          if (data.userEmail) localStorage.setItem(USER_EMAIL_KEY, data.userEmail);
-          if (data.userName) localStorage.setItem(USER_NAME_KEY, data.userName);
-          return data.accessToken;
-        }
+      if (data && data.accessToken) {
+        const exp = data.expiresAt ? Number(data.expiresAt) : Date.now() + 365 * 24 * 60 * 60 * 1000;
+        cloudTokenCache = {
+          token: data.accessToken,
+          expiresAt: exp,
+          email: data.userEmail || null,
+          name: data.userName || null,
+        };
+        localStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
+        localStorage.setItem(TOKEN_EXPIRY_KEY, String(exp));
+        if (data.userEmail) localStorage.setItem(USER_EMAIL_KEY, data.userEmail);
+        if (data.userName) localStorage.setItem(USER_NAME_KEY, data.userName);
+        notifyStatusListeners();
+        return data.accessToken;
       }
     }
   } catch (err) {

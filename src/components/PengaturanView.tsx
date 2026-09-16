@@ -14,6 +14,7 @@ import {
   getOrFetchDriveToken,
   connectGoogleDrive,
   disconnectGoogleDrive,
+  subscribeToDriveAuthStatus,
   DriveAuthStatus,
 } from '../services/googleDrive';
 import {
@@ -70,12 +71,10 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   const [selectedCollection, setSelectedCollection] = useState<string>('surat_masuk');
 
   useEffect(() => {
-    // Initial status
-    setDriveStatus(getDriveAuthStatus());
-    // Also try fetching from cloud if not present locally
-    getOrFetchDriveToken().then(() => {
-      setDriveStatus(getDriveAuthStatus());
+    const unsubscribe = subscribeToDriveAuthStatus((status) => {
+      setDriveStatus(status);
     });
+    return () => unsubscribe();
   }, []);
 
   const handleChange = (field: keyof SchoolProfile, value: string) => {
