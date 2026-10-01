@@ -16,6 +16,25 @@ export interface GoogleDriveAttachment {
   uploadedBy?: string;
 }
 
+export interface DocumentAttachment {
+  fileId: string;
+  fileName: string;
+  fileSize: string;
+  mimeType: string;
+  url?: string;
+  dataUrl?: string;
+  isChunked?: boolean;
+  totalChunks?: number;
+  storageType?: 'cloud_app' | 'google_drive' | 'both';
+  uploadedAt: string;
+  uploadedBy?: string;
+  category?: 'surat_masuk' | 'surat_keluar';
+  suratNo?: string;
+  driveFileId?: string;
+  driveWebViewLink?: string;
+  driveThumbnailLink?: string;
+}
+
 export interface SuratMasuk {
   id: string;
   noUrut: string;
@@ -33,6 +52,7 @@ export interface SuratMasuk {
   kodeKlasifikasi?: string;
   fileLampiran?: string;
   fileSize?: string;
+  fileAttachment?: DocumentAttachment;
   // Google Drive Integration
   driveAttachment?: GoogleDriveAttachment;
   driveFileId?: string;
@@ -66,6 +86,8 @@ export interface SuratKeluar {
   kodeKlasifikasi?: string;
   ringkasan?: string;
   fileLampiran?: string;
+  fileSize?: string;
+  fileAttachment?: DocumentAttachment;
   // Google Drive Integration
   driveAttachment?: GoogleDriveAttachment;
   driveFileId?: string;

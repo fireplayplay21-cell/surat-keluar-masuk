@@ -6,16 +6,20 @@ import {
   MasterKlasifikasi,
   MasterInstansi,
   GoogleDriveAttachment,
+  DocumentAttachment,
   AppUser,
 } from '../types';
 import {
   getDriveAuthStatus,
-  getOrFetchDriveToken,
   connectGoogleDrive,
-  uploadFileToGoogleDrive,
   subscribeToDriveAuthStatus,
   DriveAuthStatus,
 } from '../services/googleDrive';
+import {
+  uploadDocument,
+  downloadDocument,
+} from '../services/documentStorage';
+import { ModalDokumenViewer } from './ModalDokumenViewer';
 
 interface ModalSuratMasukProps {
   isOpen: boolean;
@@ -51,13 +55,16 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
   const [kodeKlasifikasi, setKodeKlasifikasi] = useState('');
   const [ringkasan, setRingkasan] = useState('');
 
-  // Attachment & Google Drive states
+  // Document Attachment states (Direct App Cloud Storage)
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
+  const [fileAttachment, setFileAttachment] = useState<DocumentAttachment | undefined>(undefined);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [driveAttachment, setDriveAttachment] = useState<GoogleDriveAttachment | undefined>(undefined);
-  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [driveStatus, setDriveStatus] = useState<DriveAuthStatus>({
     isConnected: false,
     userEmail: null,
@@ -71,6 +78,7 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
   useEffect(() => {
     if (isOpen) {
       setUploadError(null);
+      setUploadSuccessMsg(null);
       const unsubscribe = subscribeToDriveAuthStatus((status) => {
         setDriveStatus(status);
       });
@@ -90,8 +98,22 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
       setStatus(editItem.status);
       setKodeKlasifikasi(editItem.kodeKlasifikasi || '');
       setRingkasan(editItem.ringkasan || '');
-      setFileName(editItem.fileLampiran || editItem.driveFileName || '');
-      setFileSize(editItem.fileSize || editItem.driveAttachment?.fileSize || '');
+      setFileName(editItem.fileLampiran || editItem.fileAttachment?.fileName || editItem.driveFileName || '');
+      setFileSize(editItem.fileSize || editItem.fileAttachment?.fileSize || editItem.driveAttachment?.fileSize || '');
+      setFileAttachment(
+        editItem.fileAttachment ||
+          (editItem.fileLampiran
+            ? {
+                fileId: editItem.driveFileId || `legacy-${editItem.id}`,
+                fileName: editItem.fileLampiran,
+                fileSize: editItem.fileSize || '1.2 MB',
+                mimeType: editItem.fileLampiran.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+                driveWebViewLink: editItem.driveWebViewLink,
+                driveThumbnailLink: editItem.driveThumbnailLink,
+                uploadedAt: editItem.tglTerima,
+              }
+            : undefined)
+      );
       setDriveAttachment(
         editItem.driveAttachment ||
           (editItem.driveFileId
@@ -120,6 +142,7 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
       setFileName('');
       setFileSize('');
       setSelectedFile(null);
+      setFileAttachment(undefined);
       setDriveAttachment(undefined);
     }
   }, [editItem, nextNoUrut, nextAgendaNumber, isOpen]);
@@ -150,48 +173,51 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
   const handleFileChange = async (file: File) => {
     setSelectedFile(file);
     setFileName(file.name);
-    const sizeKb = (file.size / 1024).toFixed(1);
-    const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${sizeKb} KB`;
-    setFileSize(sizeStr);
     setUploadError(null);
+    setUploadSuccessMsg(null);
 
-    // Auto upload to Google Drive if already connected or attempt upload
     try {
-      setIsUploadingDrive(true);
-      const attachment = await uploadFileToGoogleDrive(file, {
+      setIsUploading(true);
+      // Directly upload to school app cloud storage (Firestore) without requiring Google Drive!
+      const attachment = await uploadDocument(file, {
         noSurat: noAsal || 'SURAT_MASUK',
-        noAgenda: noUrut || '001',
-        kategori: 'surat_masuk',
+        noUrut: noUrut || '001',
+        category: 'surat_masuk',
         uploaderName: currentUser?.nama || 'Petugas Tata Usaha',
+        backupToGoogleDriveIfConnected: driveStatus.isConnected,
       });
-      setDriveAttachment(attachment);
-      setDriveStatus(getDriveAuthStatus());
+
+      setFileAttachment(attachment);
+      setFileSize(attachment.fileSize);
+
+      if (attachment.driveFileId) {
+        setDriveAttachment({
+          fileId: attachment.driveFileId,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          fileSize: attachment.fileSize,
+          webViewLink: attachment.driveWebViewLink,
+          thumbnailLink: attachment.driveThumbnailLink,
+        });
+      }
+
+      setUploadSuccessMsg('Dokumen berhasil disimpan ke Cloud Sekolah! Dapat diakses dari semua perangkat.');
     } catch (err: any) {
-      console.warn('Drive upload error:', err);
-      setUploadError(err?.message || 'Gagal mengunggah ke Google Drive, file disimpan lokal sementara.');
+      console.error('Document upload error:', err);
+      setUploadError(err?.message || 'Gagal menyimpan dokumen ke cloud. Silakan coba kembali.');
     } finally {
-      setIsUploadingDrive(false);
+      setIsUploading(false);
     }
   };
 
-  const handleManualUploadToDrive = async () => {
-    if (!selectedFile) return;
-    try {
-      setIsUploadingDrive(true);
-      setUploadError(null);
-      const attachment = await uploadFileToGoogleDrive(selectedFile, {
-        noSurat: noAsal || 'SURAT_MASUK',
-        noAgenda: noUrut || '001',
-        kategori: 'surat_masuk',
-        uploaderName: currentUser?.nama || 'Petugas Tata Usaha',
-      });
-      setDriveAttachment(attachment);
-      setDriveStatus(getDriveAuthStatus());
-    } catch (err: any) {
-      setUploadError(err?.message || 'Gagal mengunggah ke Google Drive.');
-    } finally {
-      setIsUploadingDrive(false);
-    }
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFileName('');
+    setFileSize('');
+    setFileAttachment(undefined);
+    setDriveAttachment(undefined);
+    setUploadSuccessMsg(null);
+    setUploadError(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -216,8 +242,9 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
         status,
         kodeKlasifikasi,
         ringkasan,
-        fileLampiran: fileName || (editItem?.fileLampiran ?? 'Scan_Surat_Masuk.pdf'),
-        fileSize: fileSize || editItem?.fileSize || '1.2 MB',
+        fileLampiran: fileName || fileAttachment?.fileName || (editItem?.fileLampiran ?? ''),
+        fileSize: fileSize || fileAttachment?.fileSize || editItem?.fileSize || '',
+        fileAttachment: fileAttachment || editItem?.fileAttachment,
         driveAttachment: driveAttachment || editItem?.driveAttachment,
         driveFileId: driveAttachment?.fileId || editItem?.driveFileId,
         driveWebViewLink: driveAttachment?.webViewLink || editItem?.driveWebViewLink,
@@ -419,44 +446,57 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
             />
           </div>
 
-          {/* GOOGLE DRIVE SCAN / PDF ATTACHMENT SECTION */}
+          {/* CLOUD DOCUMENT ATTACHMENT SECTION */}
           <div className="border border-[#c6c6cd] rounded-xl p-3.5 bg-[#f7f9fb]">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-[#4285F4]/15 flex items-center justify-center text-[#4285F4]">
-                  <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                <div className="w-7 h-7 rounded-lg bg-[#006a61]/15 flex items-center justify-center text-[#006a61]">
+                  <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-black flex items-center gap-1.5">
-                    Simpan Scan PDF / Foto ke Google Drive
-                    {driveStatus.isConnected && (
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.2 rounded-full flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        Drive Terhubung ({driveStatus.userEmail || 'Google'})
-                      </span>
-                    )}
+                  <h4 className="text-xs font-bold text-black flex items-center gap-1.5 flex-wrap">
+                    <span>Lampiran Scan PDF / Foto Surat</span>
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                      Cloud Sekolah (Tanpa Perlu Login Google Drive)
+                    </span>
                   </h4>
+                  <p className="text-[10.5px] text-[#76777d]">
+                    Langsung disimpan ke cloud sekolah dan dapat diakses dari semua perangkat
+                  </p>
                 </div>
               </div>
 
-              {!driveStatus.isConnected && (
+              {/* Optional Google Drive Indicator */}
+              {driveStatus.isConnected ? (
+                <span className="bg-[#4285F4]/10 text-[#1a73e8] text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 self-start sm:self-auto shrink-0">
+                  <span className="material-symbols-outlined text-[12px]">cloud_done</span>
+                  Drive Terhubung (Cadangan Aktif)
+                </span>
+              ) : (
                 <button
                   type="button"
                   onClick={handleConnectDrive}
-                  className="text-xs bg-white border border-[#c6c6cd] hover:border-[#006a61] text-[#006a61] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                  className="text-[11px] text-[#45464d] hover:text-[#006a61] underline flex items-center gap-1 self-start sm:self-auto shrink-0 cursor-pointer"
+                  title="Hubungkan jika ingin membuat cadangan tambahan di Google Drive pribadi"
                 >
-                  <span className="material-symbols-outlined text-[14px]">link</span>
-                  Hubungkan Drive
+                  <span className="material-symbols-outlined text-[13px]">link</span>
+                  Cadangkan ke Drive (Opsional)
                 </button>
               )}
             </div>
 
             {uploadError && (
               <div className="bg-amber-50 border border-amber-300 text-amber-900 text-xs p-2 rounded-lg mb-2.5 flex items-start gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-amber-700 mt-0.5">warning</span>
-                <div>
-                  <p className="font-semibold">{uploadError}</p>
-                </div>
+                <span className="material-symbols-outlined text-[16px] text-amber-700 mt-0.5 shrink-0">warning</span>
+                <p className="font-medium">{uploadError}</p>
+              </div>
+            )}
+
+            {uploadSuccessMsg && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-2 rounded-lg mb-2.5 flex items-start gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-emerald-600 mt-0.5 shrink-0">check_circle</span>
+                <p className="font-semibold">{uploadSuccessMsg}</p>
               </div>
             )}
 
@@ -495,106 +535,93 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
                 }}
               />
 
-              {isUploadingDrive ? (
-                <div className="py-3 flex flex-col items-center justify-center gap-2">
-                  <div className="w-7 h-7 border-3 border-[#006a61] border-t-transparent rounded-full animate-spin"></div>
+              {isUploading ? (
+                <div className="py-4 flex flex-col items-center justify-center gap-2">
+                  <div className="w-8 h-8 border-3 border-[#006a61] border-t-transparent rounded-full animate-spin"></div>
                   <p className="text-xs font-bold text-[#006a61]">
-                    Mengunggah scan surat ke Google Drive...
+                    Menyimpan berkas ke Cloud Dokumen Sekolah...
                   </p>
-                  <p className="text-[11px] text-[#76777d]">Membuat tautan pratinjau cloud...</p>
+                  <p className="text-[11px] text-[#76777d]">
+                    Mengoptimasi dokumen dan membuat salinan akses antar-perangkat
+                  </p>
                 </div>
-              ) : driveAttachment ? (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-emerald-50/70 border border-emerald-200 rounded-lg text-left">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
-                      <span className="material-symbols-outlined text-[20px]">
-                        {driveAttachment.mimeType.includes('image') ? 'image' : 'picture_as_pdf'}
+              ) : fileAttachment || fileName ? (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-left">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-800 shrink-0">
+                      <span className="material-symbols-outlined text-[22px]">
+                        {fileAttachment?.mimeType?.startsWith('image/') || fileName.match(/\.(jpe?g|png|webp)$/i)
+                          ? 'image'
+                          : 'picture_as_pdf'}
                       </span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-bold text-black truncate max-w-xs">
-                          {driveAttachment.fileName}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-bold text-black truncate max-w-xs sm:max-w-sm">
+                          {fileAttachment?.fileName || fileName}
                         </p>
-                        <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded">
-                          Google Drive
+                        <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
+                          Cloud Sekolah
                         </span>
+                        {fileAttachment?.driveFileId && (
+                          <span className="bg-[#4285F4] text-white text-[9px] font-black px-1.5 py-0.5 rounded">
+                            Google Drive
+                          </span>
+                        )}
                       </div>
-                      <p className="text-[10.5px] text-emerald-800">
-                        Ukuran: {driveAttachment.fileSize || fileSize || '-'} • Tersimpan di Cloud
+                      <p className="text-[11px] text-emerald-900 mt-0.5">
+                        Ukuran: {fileAttachment?.fileSize || fileSize || '1.2 MB'} • Siap Diakses Semua Perangkat
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {driveAttachment.webViewLink && (
-                      <a
-                        href={driveAttachment.webViewLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-2.5 py-1 rounded-md flex items-center gap-1 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">visibility</span>
-                        Buka di Drive
-                      </a>
-                    )}
+                  <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end">
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-xs text-[#45464d] hover:text-black font-semibold px-2 py-1"
+                      onClick={() => setIsPreviewOpen(true)}
+                      className="text-xs bg-[#006a61] hover:bg-[#006a61]/90 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-xs transition-colors"
+                      title="Lihat Pratinjau Dokumen"
                     >
-                      Ganti
-                    </button>
-                  </div>
-                </div>
-              ) : fileName ? (
-                <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-blue-700 text-[20px]">
-                      description
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-black">{fileName}</p>
-                      <p className="text-[10px] text-[#76777d]">{fileSize || 'Dokumen Lokal'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleManualUploadToDrive}
-                      className="text-xs bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold px-2.5 py-1 rounded-md flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">cloud_upload</span>
-                      Unggah ke Drive
+                      <span className="material-symbols-outlined text-[15px]">visibility</span>
+                      <span>Pratinjau</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs text-[#45464d] hover:text-black font-semibold px-1.5 py-1"
+                      className="text-xs bg-white border border-[#c6c6cd] hover:border-black text-[#45464d] hover:text-black font-semibold px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors"
+                      title="Ganti berkas dengan file lain"
                     >
                       Ganti
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+                      title="Hapus lampiran"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="py-2">
-                  <span className="material-symbols-outlined text-3xl text-[#006a61] block mb-1">
+                <div className="py-3">
+                  <span className="material-symbols-outlined text-4xl text-[#006a61] block mb-1">
                     document_scanner
                   </span>
                   <p className="text-xs font-bold text-black">
                     Pilih Berkas Scan PDF atau Foto Surat
                   </p>
                   <p className="text-[11px] text-[#76777d] mt-0.5">
-                    Tersimpan otomatis ke Google Drive & database Firebase sekolah
+                    Langsung terunggah ke Cloud Sekolah tanpa perlu otorisasi Google Drive
                   </p>
 
-                  <div className="flex justify-center gap-2 mt-3">
+                  <div className="flex justify-center gap-2.5 mt-3">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="bg-white border border-[#c6c6cd] hover:border-[#006a61] text-black font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      className="bg-white border border-[#c6c6cd] hover:border-[#006a61] text-black font-bold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer hover:bg-[#f7f9fb] transition-all"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-[#006a61]">
+                      <span className="material-symbols-outlined text-[17px] text-[#006a61]">
                         folder_open
                       </span>
                       Pilih Dokumen / PDF
@@ -602,10 +629,10 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
                     <button
                       type="button"
                       onClick={() => cameraInputRef.current?.click()}
-                      className="bg-[#86f2e4]/30 hover:bg-[#86f2e4]/50 text-[#005049] font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer"
+                      className="bg-[#86f2e4]/30 hover:bg-[#86f2e4]/50 text-[#005049] font-bold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all"
                     >
-                      <span className="material-symbols-outlined text-[16px]">photo_camera</span>
-                      Ambil Foto / Scan
+                      <span className="material-symbols-outlined text-[17px]">photo_camera</span>
+                      Ambil Foto Scan
                     </button>
                   </div>
                 </div>
@@ -617,7 +644,7 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-[#eceef0]">
             <span className="text-[11px] text-[#76777d] flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px] text-[#006a61]">cloud_sync</span>
-              Sinkronisasi Cloud Aktif
+              Penyimpanan Cloud Sekolah Aktif
             </span>
             <div className="flex gap-2">
               <button
@@ -629,7 +656,7 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={isUploadingDrive}
+                disabled={isUploading}
                 className="px-5 py-2 bg-[#006a61] text-white rounded-lg text-xs font-bold hover:bg-[#006a61]/90 focus-ring-teal cursor-pointer shadow-xs flex items-center gap-1.5 disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[16px]">save</span>
@@ -639,6 +666,29 @@ export const ModalSuratMasuk: React.FC<ModalSuratMasukProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Interactive Document Preview Modal */}
+      {isPreviewOpen && (
+        <ModalDokumenViewer
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          attachment={
+            fileAttachment ||
+            (fileName
+              ? {
+                  fileId: `preview-${Date.now()}`,
+                  fileName,
+                  fileSize: fileSize || 'Dokumen',
+                  mimeType: fileName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+                  driveWebViewLink: driveAttachment?.webViewLink,
+                  uploadedAt: new Date().toISOString(),
+                }
+              : null)
+          }
+          title={perihal}
+          suratNo={noAsal || noUrut}
+        />
+      )}
     </div>
   );
 };

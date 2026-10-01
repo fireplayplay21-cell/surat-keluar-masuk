@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { SuratKeluar, SifatSurat, StatusSuratKeluar, AppUser } from '../types';
+import { SuratKeluar, SifatSurat, StatusSuratKeluar, AppUser, DocumentAttachment } from '../types';
 import { ResponsiveTableWrapper } from './ResponsiveTableWrapper';
+import { ModalDokumenViewer } from './ModalDokumenViewer';
 
 interface SuratKeluarViewProps {
   suratList: SuratKeluar[];
@@ -28,6 +29,11 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterSifat, setFilterSifat] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewerDoc, setViewerDoc] = useState<{
+    attachment: DocumentAttachment;
+    title: string;
+    suratNo: string;
+  } | null>(null);
   const itemsPerPage = 5;
 
   const isKepsek = currentUser?.role === 'kepala_sekolah';
@@ -287,23 +293,44 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
                       </td>
                       <td className="py-3.5 px-4 max-w-xs text-[#191c1e]" title={item.perihal}>
                         <div className="font-medium text-black line-clamp-2">{item.perihal}</div>
-                        {(item.driveAttachment || item.driveFileId || item.driveWebViewLink) && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="inline-flex items-center gap-1 bg-[#4285F4]/10 text-[#1a73e8] text-[10px] font-bold px-1.5 py-0.2 rounded">
-                              <span className="material-symbols-outlined text-[13px]">cloud_done</span>
-                              Salinan Drive
-                            </span>
+                        {(item.fileAttachment || item.fileLampiran || item.driveAttachment || item.driveWebViewLink) && (
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const docToView: DocumentAttachment = item.fileAttachment || {
+                                  fileId: item.driveFileId || `sk-${item.id}`,
+                                  fileName: item.fileLampiran || item.driveFileName || 'Salinan_Surat_Keluar.pdf',
+                                  fileSize: item.fileSize || '1.2 MB',
+                                  mimeType: (item.fileLampiran || '').endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+                                  driveWebViewLink: item.driveWebViewLink || item.driveAttachment?.webViewLink,
+                                  uploadedAt: item.tglSurat,
+                                };
+                                setViewerDoc({
+                                  attachment: docToView,
+                                  title: item.perihal,
+                                  suratNo: item.noSurat || item.noUrut,
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 bg-[#006a61]/10 hover:bg-[#006a61]/20 text-[#006a61] text-[10px] font-bold px-2 py-0.5 rounded cursor-pointer transition-colors"
+                              title="Buka Pratinjau Salinan Surat Langsung"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">visibility</span>
+                              <span>Lihat Salinan</span>
+                            </button>
+
                             {item.driveWebViewLink && (
                               <a
                                 href={item.driveWebViewLink}
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-[11px] text-[#006a61] hover:underline font-semibold flex items-center gap-0.5"
+                                className="inline-flex items-center gap-0.5 bg-[#4285F4]/10 hover:bg-[#4285F4]/20 text-[#1a73e8] text-[10px] font-bold px-1.5 py-0.5 rounded"
                                 title="Buka berkas di Google Drive"
                               >
-                                <span>Buka File</span>
-                                <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                <span>Drive</span>
+                                <span className="material-symbols-outlined text-[11px]">open_in_new</span>
                               </a>
                             )}
                           </div>
@@ -406,6 +433,17 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Interactive Document Viewer Modal */}
+      {viewerDoc && (
+        <ModalDokumenViewer
+          isOpen={!!viewerDoc}
+          onClose={() => setViewerDoc(null)}
+          attachment={viewerDoc.attachment}
+          title={viewerDoc.title}
+          suratNo={viewerDoc.suratNo}
+        />
+      )}
     </div>
   );
 };

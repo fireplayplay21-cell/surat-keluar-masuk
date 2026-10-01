@@ -38,6 +38,13 @@ service cloud.firestore {
     match /tahun_ajaran/{id} {
       allow read, write: if true;
     }
+
+    match /dokumen_lampiran/{id} {
+      allow read, write: if true;
+      match /chunks/{chunkId} {
+        allow read, write: if true;
+      }
+    }
   }
 }
 

@@ -534,7 +534,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
             <div className="bg-white border border-[#c6c6cd] rounded-xl p-5 shadow-xs">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[#45464d] mb-3 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[18px] text-[#006a61]">cloud_sync</span>
-                Koneksi Firebase & Google Drive
+                Penyimpanan Cloud & Integrasi
               </h4>
 
               {driveMsg && (
@@ -545,16 +545,37 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
               )}
 
               <div className="space-y-3 text-xs">
+                {/* Cloud Dokumen Sekolah (Utama - Tanpa Google Login) */}
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#006a61] text-[20px]">cloud_done</span>
+                      <span className="font-bold text-black text-xs">Cloud Dokumen Sekolah (Bebas Login)</span>
+                    </div>
+                    <span className="bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      Aktif Utama
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#005049] leading-relaxed">
+                    Pengguna di HP, laptop, dan tablet dapat <strong>langsung mengunggah berkas scan PDF / foto tanpa perlu login ke Google Drive</strong>. Seluruh berkas tersimpan aman di cloud sekolah dan dapat langsung dilihat & diunduh oleh siapa saja yang berhak.
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-200/60 text-[10.5px] text-[#006a61]">
+                    <span className="material-symbols-outlined text-[14px]">verified</span>
+                    <span>Bekerja di seluruh perangkat tanpa konfigurasi tambahan</span>
+                  </div>
+                </div>
+
                 {/* Firebase Firestore Status */}
                 <div className="p-3 bg-[#f7f9fb] border border-[#c6c6cd] rounded-xl">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-amber-600 text-[20px]">local_fire_department</span>
-                      <span className="font-bold text-black text-xs">Firebase Firestore</span>
+                      <span className="font-bold text-black text-xs">Database Firebase Firestore</span>
                     </div>
                     <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                      Aktif & Terhubung
+                      Terhubung Realtime
                     </span>
                   </div>
                   <p className="text-[11px] text-[#45464d]">
@@ -567,29 +588,32 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                   </div>
                 </div>
 
-                {/* Google Drive Status */}
+                {/* Google Drive Status (Opsional) */}
                 <div className="p-3 bg-[#f7f9fb] border border-[#c6c6cd] rounded-xl">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[#4285F4] text-[20px]">cloud_upload</span>
-                      <span className="font-bold text-black text-xs">Penyimpanan Terpusat Google Drive</span>
+                      <div>
+                        <span className="font-bold text-black text-xs">Pencadangan Google Drive</span>
+                        <span className="text-[10px] text-[#76777d] block">(Pilihan Cadangan / Opsional)</span>
+                      </div>
                     </div>
                     {driveStatus.isConnected ? (
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        Terhubung Semua Perangkat
+                      <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                        Cadangan Aktif
                       </span>
                     ) : (
-                      <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                        Belum Terhubung
+                      <span className="bg-gray-100 text-[#45464d] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        Tidak Wajib
                       </span>
                     )}
                   </div>
 
-                  <p className="text-[11px] text-[#45464d] mb-2">
+                  <p className="text-[11px] text-[#45464d] mb-2 leading-relaxed">
                     {driveStatus.isConnected
-                      ? `Menyimpan otomatis seluruh scan PDF & foto dari semua perangkat pengguna ke Google Drive akun ${driveStatus.userEmail || 'Google'} di folder 'Arsip Tata Usaha ${formData.namaSekolah}'. Pengguna di perangkat lain tidak perlu login ulang.`
-                      : 'Cukup hubungkan sekali di sini. Seluruh perangkat dan pengguna lain dapat langsung mengunggah berkas foto/PDF ke Google Drive Anda tanpa perlu login lagi.'}
+                      ? `Menyimpan salinan arsip ke Google Drive akun ${driveStatus.userEmail || 'Google'} di folder 'Arsip Tata Usaha ${formData.namaSekolah}'.`
+                      : 'Google Drive hanya bersifat cadangan tambahan. Anda tetap dapat mengunggah dan mengunduh berkas surat kapan pun tanpa perlu menghubungkan Google Drive.'}
                   </p>
 
                   <div className="flex gap-2">
@@ -599,21 +623,21 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={handleDisconnectDrive}
                         className="w-full bg-white border border-[#c6c6cd] hover:border-red-300 text-red-600 font-bold py-1.5 rounded-lg text-xs cursor-pointer hover:bg-red-50 transition-colors"
                       >
-                        Putuskan Google Drive Bersama
+                        Putuskan Salinan Google Drive
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={handleConnectDrive}
                         disabled={isConnectingDrive}
-                        className="w-full bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+                        className="w-full bg-white border border-[#c6c6cd] hover:border-[#4285F4] text-[#4285F4] font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
                       >
                         {isConnectingDrive ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin"></div>
                         ) : (
                           <span className="material-symbols-outlined text-[16px]">link</span>
                         )}
-                        <span>Hubungkan Google Drive Sekolah</span>
+                        <span>Hubungkan Google Drive (Cadangan)</span>
                       </button>
                     )}
                   </div>

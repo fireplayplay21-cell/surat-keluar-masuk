@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { SuratMasuk, SifatSurat, StatusSuratMasuk, AppUser } from '../types';
+import { SuratMasuk, SifatSurat, StatusSuratMasuk, AppUser, DocumentAttachment } from '../types';
 import { ResponsiveTableWrapper } from './ResponsiveTableWrapper';
+import { ModalDokumenViewer } from './ModalDokumenViewer';
 
 interface SuratMasukViewProps {
   suratList: SuratMasuk[];
@@ -29,6 +30,11 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [guruTabFilter, setGuruTabFilter] = useState<'semua' | 'saya'>('semua');
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewerDoc, setViewerDoc] = useState<{
+    attachment: DocumentAttachment;
+    title: string;
+    suratNo: string;
+  } | null>(null);
   const itemsPerPage = 5;
 
   const isGuru = currentUser?.role === 'guru';
@@ -374,29 +380,50 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
                         {item.pengirim}
                       </td>
 
-                      {/* Perihal & Drive Attachment Badge */}
+                      {/* Perihal & Document Attachment Badges */}
                       <td
                         className="py-3.5 px-4 max-w-xs text-[#191c1e]"
                         title={item.perihal}
                       >
                         <div className="font-medium text-black line-clamp-2">{item.perihal}</div>
-                        {(item.driveAttachment || item.driveFileId || item.driveWebViewLink) && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="inline-flex items-center gap-1 bg-[#4285F4]/10 text-[#1a73e8] text-[10px] font-bold px-1.5 py-0.2 rounded">
-                              <span className="material-symbols-outlined text-[13px]">cloud_done</span>
-                              Scan Drive
-                            </span>
+                        {(item.fileAttachment || item.fileLampiran || item.driveAttachment || item.driveWebViewLink) && (
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const docToView: DocumentAttachment = item.fileAttachment || {
+                                  fileId: item.driveFileId || `sm-${item.id}`,
+                                  fileName: item.fileLampiran || item.driveFileName || 'Dokumen_Surat.pdf',
+                                  fileSize: item.fileSize || '1.2 MB',
+                                  mimeType: (item.fileLampiran || '').endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+                                  driveWebViewLink: item.driveWebViewLink || item.driveAttachment?.webViewLink,
+                                  uploadedAt: item.tglTerima,
+                                };
+                                setViewerDoc({
+                                  attachment: docToView,
+                                  title: item.perihal,
+                                  suratNo: item.noAsal || item.noUrut,
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 bg-[#006a61]/10 hover:bg-[#006a61]/20 text-[#006a61] text-[10px] font-bold px-2 py-0.5 rounded cursor-pointer transition-colors"
+                              title="Lihat Pratinjau Dokumen Langsung"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">visibility</span>
+                              <span>Lihat Dokumen</span>
+                            </button>
+
                             {item.driveWebViewLink && (
                               <a
                                 href={item.driveWebViewLink}
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-[11px] text-[#006a61] hover:underline font-semibold flex items-center gap-0.5"
+                                className="inline-flex items-center gap-0.5 bg-[#4285F4]/10 hover:bg-[#4285F4]/20 text-[#1a73e8] text-[10px] font-bold px-1.5 py-0.5 rounded"
                                 title="Buka berkas di Google Drive"
                               >
-                                <span>Lihat Scan</span>
-                                <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                <span>Drive</span>
+                                <span className="material-symbols-outlined text-[11px]">open_in_new</span>
                               </a>
                             )}
                           </div>
@@ -547,6 +574,17 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Interactive Document Viewer Modal */}
+      {viewerDoc && (
+        <ModalDokumenViewer
+          isOpen={!!viewerDoc}
+          onClose={() => setViewerDoc(null)}
+          attachment={viewerDoc.attachment}
+          title={viewerDoc.title}
+          suratNo={viewerDoc.suratNo}
+        />
+      )}
     </div>
   );
 };

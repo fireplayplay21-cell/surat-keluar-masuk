@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SuratMasuk, StatusSuratMasuk } from '../types';
+import { downloadDocument } from '../services/documentStorage';
+import { ModalDokumenViewer } from './ModalDokumenViewer';
 
 interface ModalDetailSuratProps {
   isOpen: boolean;
@@ -16,10 +18,40 @@ export const ModalDetailSurat: React.FC<ModalDetailSuratProps> = ({
   onOpenDisposisi,
   onUpdateStatus,
 }) => {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
   if (!isOpen || !surat) return null;
 
   const driveLink = surat.driveAttachment?.webViewLink || surat.driveWebViewLink;
   const isDriveStored = !!(driveLink || surat.driveAttachment || surat.driveFileId);
+  const hasAttachment = !!(surat.fileAttachment || surat.fileLampiran || driveLink);
+
+  const activeAttachment =
+    surat.fileAttachment ||
+    (surat.fileLampiran
+      ? {
+          fileId: surat.driveFileId || `legacy-${surat.id}`,
+          fileName: surat.fileLampiran,
+          fileSize: surat.fileSize || '1.2 MB',
+          mimeType: surat.fileLampiran.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+          driveWebViewLink: driveLink,
+          driveThumbnailLink: surat.driveThumbnailLink,
+          uploadedAt: surat.tglTerima,
+        }
+      : null);
+
+  const handleDownload = async () => {
+    if (!activeAttachment) return;
+    try {
+      await downloadDocument(activeAttachment, surat.fileLampiran || activeAttachment.fileName);
+    } catch (e: any) {
+      if (driveLink) {
+        window.open(driveLink, '_blank');
+      } else {
+        alert(e?.message || 'Dokumen belum tersedia untuk diunduh.');
+      }
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -30,6 +62,10 @@ export const ModalDetailSurat: React.FC<ModalDetailSuratProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#006a61] bg-[#86f2e4]/40 px-2 py-0.5 rounded-md">
                 No. Urut: {surat.noUrut || surat.noAgenda}
+              </span>
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                Cloud Sekolah
               </span>
               {isDriveStored && (
                 <span className="bg-[#4285F4]/15 text-[#1a73e8] text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -148,68 +184,84 @@ export const ModalDetailSurat: React.FC<ModalDetailSuratProps> = ({
             )}
           </div>
 
-          {/* File Lampiran & Google Drive Storage */}
-          {(surat.fileLampiran || driveLink) && (
-            <div className="p-3.5 border border-[#c6c6cd] rounded-xl bg-white space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-[#4285F4]/10 flex items-center justify-center text-[#4285F4]">
+          {/* File Lampiran & Cloud Storage Card */}
+          {hasAttachment && activeAttachment && (
+            <div className="p-4 border border-[#c6c6cd] rounded-xl bg-white space-y-3 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#006a61]/10 flex items-center justify-center text-[#006a61] shrink-0">
                     <span className="material-symbols-outlined text-2xl">
-                      {surat.driveAttachment?.mimeType?.includes('image')
+                      {activeAttachment.mimeType?.startsWith('image/') || (activeAttachment.fileName || '').match(/\.(jpe?g|png|webp)$/i)
                         ? 'image'
                         : 'picture_as_pdf'}
                     </span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-bold text-black">
-                        {surat.driveAttachment?.fileName ||
-                          surat.driveFileName ||
-                          surat.fileLampiran}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-bold text-black truncate max-w-xs sm:max-w-md">
+                        {activeAttachment.fileName || surat.fileLampiran}
                       </p>
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                        Cloud Dokumen Sekolah
+                      </span>
                       {isDriveStored && (
-                        <span className="bg-[#4285F4] text-white text-[9px] font-black px-1.5 py-0.2 rounded">
+                        <span className="bg-[#4285F4]/15 text-[#1a73e8] text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">cloud_done</span>
                           Google Drive
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-[#76777d]">
-                      {surat.driveAttachment?.fileSize || surat.fileSize || 'Dokumen Scan Surat'} •
-                      {isDriveStored ? ' Tersimpan di Cloud Drive' : ' Berkas lokal'}
+                    <p className="text-[11px] text-[#76777d] mt-0.5">
+                      Ukuran: {activeAttachment.fileSize || surat.fileSize || 'Dokumen Scan'} • Tersimpan Terpusat
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {driveLink ? (
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewOpen(true)}
+                    className="text-xs bg-[#006a61] hover:bg-[#006a61]/90 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    title="Buka Pratinjau Dokumen Langsung"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">visibility</span>
+                    <span>Lihat Dokumen</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="text-xs bg-[#f2f4f6] text-black px-3 py-1.5 rounded-lg font-semibold hover:bg-[#e6e8ea] flex items-center gap-1.5 cursor-pointer transition-colors border border-[#c6c6cd]"
+                    title="Unduh Berkas Asli"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Unduh</span>
+                  </button>
+
+                  {driveLink && (
                     <a
                       href={driveLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs bg-[#006a61] hover:bg-[#006a61]/90 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 cursor-pointer shadow-xs"
+                      className="text-xs bg-[#4285F4] hover:bg-[#3367D6] text-white px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 cursor-pointer shadow-xs transition-colors"
+                      title="Buka Cadangan di Google Drive"
                     >
-                      <span className="material-symbols-outlined text-[15px]">open_in_new</span>
-                      Buka di Drive
+                      <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                      <span>Drive</span>
                     </a>
-                  ) : (
-                    <button
-                      onClick={() => alert(`Mengunduh berkas: ${surat.fileLampiran}`)}
-                      className="text-xs bg-[#f2f4f6] text-black px-3 py-1.5 rounded-lg font-semibold hover:bg-[#e6e8ea] flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">download</span>
-                      Unduh File
-                    </button>
                   )}
                 </div>
               </div>
 
-              {/* In-Modal Drive Preview for Images or PDFs if available */}
-              {surat.driveThumbnailLink && (
+              {/* In-Modal Image or Thumbnail Preview */}
+              {(surat.driveThumbnailLink || activeAttachment.dataUrl) && (
                 <div className="pt-2 border-t border-[#eceef0]">
                   <img
-                    src={surat.driveThumbnailLink}
+                    src={activeAttachment.dataUrl || surat.driveThumbnailLink}
                     alt="Preview scan surat"
-                    className="max-h-48 rounded-lg border border-[#c6c6cd] mx-auto object-contain"
+                    className="max-h-48 rounded-lg border border-[#c6c6cd] mx-auto object-contain cursor-pointer hover:opacity-95"
+                    onClick={() => setIsPreviewOpen(true)}
+                    title="Klik untuk memperbesar"
                   />
                 </div>
               )}
@@ -264,6 +316,17 @@ export const ModalDetailSurat: React.FC<ModalDetailSuratProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Interactive Document Preview Modal */}
+      {isPreviewOpen && activeAttachment && (
+        <ModalDokumenViewer
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          attachment={activeAttachment}
+          title={surat.perihal}
+          suratNo={surat.noAsal || surat.noUrut}
+        />
+      )}
     </div>
   );
 };
