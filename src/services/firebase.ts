@@ -114,7 +114,7 @@ export const COLLECTIONS = {
   SCHOOL_PROFILE: 'school_profile',
 } as const;
 
-// Helper to sanitize Firestore documents (removing undefined values)
+// Helper to sanitize Firestore documents (removing undefined values and massive dataUrls)
 function sanitizeDoc<T extends Record<string, any>>(data: T): Record<string, any> {
   const clean: Record<string, any> = {};
   Object.keys(data).forEach((key) => {
@@ -130,6 +130,14 @@ function sanitizeDoc<T extends Record<string, any>>(data: T): Record<string, any
   return clean;
 }
 
+// Clean file attachment for storing in surat_masuk and surat_keluar documents
+// Prevents document exceeding 1MB Firestore limit by storing binary/base64 in dokumen_lampiran
+function cleanAttachmentForParentDoc(att: any) {
+  if (!att || typeof att !== 'object') return null;
+  const { dataUrl, url, ...safeFields } = att;
+  return safeFields;
+}
+
 // -------------------------------------------------------------
 // SURAT MASUK CRUD
 // -------------------------------------------------------------
@@ -138,10 +146,17 @@ export async function saveSuratMasukToFirestore(surat: SuratMasuk): Promise<void
   try {
     const docRef = doc(db, COLLECTIONS.SURAT_MASUK, surat.id);
     const noUrut = surat.noUrut || surat.noAgenda || '001';
+    
+    // Ensure fileAttachment does not carry huge base64 dataUrl inside parent surat doc
+    const sanitizedAttachment = surat.fileAttachment
+      ? cleanAttachmentForParentDoc(surat.fileAttachment)
+      : null;
+
     const cleaned = sanitizeDoc({
       ...surat,
       noUrut,
       noAgenda: noUrut, // tetap simpan untuk kompatibilitas data lama
+      fileAttachment: sanitizedAttachment,
       updatedAt: new Date().toISOString(),
     });
     await setDoc(docRef, cleaned, { merge: true });
@@ -168,10 +183,17 @@ export async function saveSuratKeluarToFirestore(surat: SuratKeluar): Promise<vo
   try {
     const docRef = doc(db, COLLECTIONS.SURAT_KELUAR, surat.id);
     const noUrut = surat.noUrut || surat.noAgenda || '001';
+    
+    // Ensure fileAttachment does not carry huge base64 dataUrl inside parent surat doc
+    const sanitizedAttachment = surat.fileAttachment
+      ? cleanAttachmentForParentDoc(surat.fileAttachment)
+      : null;
+
     const cleaned = sanitizeDoc({
       ...surat,
       noUrut,
       noAgenda: noUrut, // tetap simpan untuk kompatibilitas data lama
+      fileAttachment: sanitizedAttachment,
       updatedAt: new Date().toISOString(),
     });
     await setDoc(docRef, cleaned, { merge: true });

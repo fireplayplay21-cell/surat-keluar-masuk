@@ -37,6 +37,8 @@ export const ModalDetailSurat: React.FC<ModalDetailSuratProps> = ({
           driveWebViewLink: driveLink,
           driveThumbnailLink: surat.driveThumbnailLink,
           uploadedAt: surat.tglTerima,
+          suratNo: surat.noAsal || surat.noUrut,
+          title: surat.perihal,
         }
       : null);
 

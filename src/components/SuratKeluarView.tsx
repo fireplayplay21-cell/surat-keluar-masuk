@@ -306,6 +306,7 @@ export const SuratKeluarView: React.FC<SuratKeluarViewProps> = ({
                                   mimeType: (item.fileLampiran || '').endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
                                   driveWebViewLink: item.driveWebViewLink || item.driveAttachment?.webViewLink,
                                   uploadedAt: item.tglSurat,
+                                  suratNo: item.noSurat || item.noUrut,
                                 };
                                 setViewerDoc({
                                   attachment: docToView,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DocumentAttachment } from '../types';
 import { getDocumentBlob, downloadDocument } from '../services/documentStorage';
+import { PdfCanvasViewer } from './PdfCanvasViewer';
 
 interface ModalDokumenViewerProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
   suratNo,
 }) => {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [resolvedMime, setResolvedMime] = useState<string>('application/pdf');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
@@ -26,6 +29,7 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
   useEffect(() => {
     if (!isOpen || !attachment) {
       setBlobUrl(null);
+      setDataUrl(null);
       setError(null);
       setZoom(100);
       setRotation(0);
@@ -38,28 +42,22 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
     setZoom(100);
     setRotation(0);
 
-    // If attachment already has a valid blob/object URL or dataUrl
-    if (attachment.url && !attachment.url.startsWith('http://') && !attachment.url.startsWith('https://drive.google.com')) {
-      setBlobUrl(attachment.url);
-      setLoading(false);
-      return;
-    }
-
-    if (attachment.dataUrl) {
-      setBlobUrl(attachment.dataUrl);
-      setLoading(false);
-      return;
-    }
-
-    // Otherwise fetch from Firestore Cloud
-    getDocumentBlob(attachment)
+    // Fetch document data using getDocumentBlob (handles memory, indexedDB, firestore, and verified fallbacks)
+    getDocumentBlob({
+      ...attachment,
+      suratNo: suratNo || (attachment as any).suratNo,
+      title: title || (attachment as any).title || attachment.fileName,
+    })
       .then((res) => {
         if (!active) return;
-        if (res?.url) {
+        if (res && (res.dataUrl || res.url)) {
           setBlobUrl(res.url);
+          setDataUrl(res.dataUrl);
+          setResolvedMime(res.mimeType);
         } else if (attachment.driveWebViewLink) {
           // If no local blob but Google Drive link exists
           setBlobUrl(null);
+          setDataUrl(null);
         } else {
           setError('Dokumen tidak dapat dimuat atau telah dihapus dari cloud.');
         }
@@ -76,43 +74,72 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
     return () => {
       active = false;
     };
-  }, [isOpen, attachment]);
+  }, [isOpen, attachment, suratNo, title]);
 
   if (!isOpen || !attachment) return null;
 
   const isImage =
+    resolvedMime.startsWith('image/') ||
+    dataUrl?.startsWith('data:image/') ||
     attachment.mimeType?.startsWith('image/') ||
-    attachment.fileName?.match(/\.(jpe?g|png|webp|gif|bmp)$/i);
+    !!attachment.fileName?.match(/\.(jpe?g|jfif|png|webp|gif|bmp)$/i);
 
   const isPdf =
-    attachment.mimeType?.includes('pdf') ||
-    attachment.fileName?.toLowerCase().endsWith('.pdf');
+    !isImage &&
+    (resolvedMime.includes('pdf') ||
+      dataUrl?.startsWith('data:application/pdf') ||
+      attachment.mimeType?.includes('pdf') ||
+      !!attachment.fileName?.toLowerCase().endsWith('.pdf'));
 
   const handleDownload = async () => {
     try {
-      await downloadDocument(attachment);
+      await downloadDocument(attachment, attachment.fileName);
     } catch (err: any) {
       alert(err?.message || 'Gagal mengunduh berkas');
     }
   };
 
   const handlePrint = () => {
-    if (!blobUrl) return;
-    const printWindow = window.open(blobUrl, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+    const printTarget = blobUrl || dataUrl;
+    if (!printTarget) return;
+
+    if (isImage) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${attachment.fileName || 'Dokumen Surat'}</title>
+              <style>
+                body { margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; }
+                img { max-width: 100%; height: auto; }
+              </style>
+            </head>
+            <body>
+              <img src="${printTarget}" onload="window.print();window.close();" />
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    } else {
+      const printWindow = window.open(printTarget, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
     }
   };
 
   return (
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 animate-in fade-in"
+      className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 animate-in fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+        className="bg-white rounded-2xl max-w-4xl w-full h-[92vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -136,56 +163,60 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
                 <h3 className="font-bold text-black text-sm sm:text-base truncate max-w-md">
                   {attachment.fileName || 'Dokumen Persuratan'}
                 </h3>
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0">
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                   Cloud Sekolah
                 </span>
               </div>
               <p className="text-xs text-[#45464d] truncate">
                 {suratNo ? `Nomor: ${suratNo} • ` : ''}
                 {title ? `${title} • ` : ''}
-                Ukuran: {attachment.fileSize || 'Dokumen'}
+                Ukuran: {attachment.fileSize || 'Dokumen Terverifikasi'}
               </p>
             </div>
           </div>
 
           {/* Action buttons */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {isImage && blobUrl && (
+            {/* Zoom & Rotation Controls for Canvas / Image */}
+            {(isImage || isPdf) && (blobUrl || dataUrl) && (
               <div className="hidden sm:flex items-center bg-[#f2f4f6] rounded-lg p-0.5 mr-1 border border-[#c6c6cd]">
                 <button
                   type="button"
-                  onClick={() => setZoom((z) => Math.max(50, z - 25))}
-                  className="p-1.5 text-[#45464d] hover:text-black hover:bg-white rounded cursor-pointer"
-                  title="Perkecil"
+                  onClick={() => setZoom((z) => Math.max(40, z - 20))}
+                  className="p-1.5 text-[#45464d] hover:text-black hover:bg-white rounded cursor-pointer transition-colors"
+                  title="Perkecil (-20%)"
                 >
                   <span className="material-symbols-outlined text-[18px]">zoom_out</span>
                 </button>
-                <span className="text-[11px] font-bold px-1.5 text-[#45464d]">{zoom}%</span>
+                <span className="text-[11px] font-bold px-1.5 text-[#45464d] min-w-[42px] text-center">
+                  {zoom}%
+                </span>
                 <button
                   type="button"
-                  onClick={() => setZoom((z) => Math.min(250, z + 25))}
-                  className="p-1.5 text-[#45464d] hover:text-black hover:bg-white rounded cursor-pointer"
-                  title="Perbesar"
+                  onClick={() => setZoom((z) => Math.min(250, z + 20))}
+                  className="p-1.5 text-[#45464d] hover:text-black hover:bg-white rounded cursor-pointer transition-colors"
+                  title="Perbesar (+20%)"
                 >
                   <span className="material-symbols-outlined text-[18px]">zoom_in</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setRotation((r) => (r + 90) % 360)}
-                  className="p-1.5 text-[#45464d] hover:text-black hover:bg-white rounded cursor-pointer"
-                  title="Putar 90°"
+                  className="p-1.5 text-[#45464d] hover:text-black hover:bg-white rounded cursor-pointer transition-colors ml-0.5"
+                  title="Putar 90 Derajat"
                 >
                   <span className="material-symbols-outlined text-[18px]">rotate_right</span>
                 </button>
               </div>
             )}
 
-            {blobUrl && (
+            {(blobUrl || dataUrl) && (
               <button
                 type="button"
                 onClick={handlePrint}
                 className="hidden sm:flex items-center gap-1 text-xs bg-white border border-[#c6c6cd] hover:bg-[#f2f4f6] text-[#45464d] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors"
-                title="Cetak Dokumen"
+                title="Cetak Dokumen Ini"
               >
                 <span className="material-symbols-outlined text-[16px]">print</span>
                 <span>Cetak</span>
@@ -196,7 +227,7 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
               type="button"
               onClick={handleDownload}
               className="flex items-center gap-1 text-xs bg-[#006a61] hover:bg-[#006a61]/90 text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer shadow-xs transition-colors"
-              title="Unduh Berkas Asli"
+              title="Unduh Berkas Asli ke Perangkat"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>
               <span>Unduh</span>
@@ -219,7 +250,7 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 text-[#76777d] hover:text-black hover:bg-[#f2f4f6] rounded-lg cursor-pointer ml-1"
-              title="Tutup"
+              title="Tutup (Esc)"
             >
               <span className="material-symbols-outlined text-[22px]">close</span>
             </button>
@@ -227,35 +258,44 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
         </div>
 
         {/* Content Viewer Body */}
-        <div className="flex-1 bg-[#191c1e]/5 relative overflow-auto p-4 flex items-center justify-center">
+        <div className="flex-1 bg-[#191c1e]/5 relative overflow-auto p-3 sm:p-4 flex items-center justify-center">
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
               <div className="w-10 h-10 border-3 border-[#006a61] border-t-transparent rounded-full animate-spin"></div>
               <p className="text-sm font-bold text-[#006a61]">
-                Memuat dokumen dari cloud sekolah...
+                Membuka Dokumen dari Cloud Sekolah...
               </p>
               <p className="text-xs text-[#76777d]">
-                Tanpa perlu login Google Drive
+                Tanpa perlu login akun Google Drive
               </p>
             </div>
           ) : error ? (
-            <div className="bg-white border border-red-200 rounded-2xl p-8 max-w-md text-center shadow-lg">
-              <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
+            <div className="bg-white border border-rose-200 rounded-2xl p-8 max-w-md text-center shadow-lg">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
                 <span className="material-symbols-outlined text-2xl">error_outline</span>
               </div>
               <h4 className="font-bold text-black text-sm mb-1">Gagal Membuka Pratinjau</h4>
               <p className="text-xs text-[#45464d] mb-4">{error}</p>
-              {attachment.driveWebViewLink ? (
-                <a
-                  href={attachment.driveWebViewLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-[#4285F4] hover:bg-[#3367D6] text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer"
+              <div className="flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="px-4 py-2 bg-[#006a61] text-white rounded-lg text-xs font-bold hover:bg-[#006a61]/90 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                  Buka Cadangan di Google Drive
-                </a>
-              ) : (
+                  <span className="material-symbols-outlined text-[16px]">download</span>
+                  Coba Unduh Berkas
+                </button>
+                {attachment.driveWebViewLink && (
+                  <a
+                    href={attachment.driveWebViewLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-[#4285F4] hover:bg-[#3367D6] text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                    Buka di Drive
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={onClose}
@@ -263,12 +303,25 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
                 >
                   Tutup
                 </button>
-              )}
+              </div>
             </div>
-          ) : isImage && blobUrl ? (
-            <div className="w-full h-full flex items-center justify-center overflow-auto">
+          ) : isPdf && (dataUrl || blobUrl) ? (
+            /* Dedicated High-Fidelity PDF Canvas Viewer */
+            <div className="w-full h-full">
+              <PdfCanvasViewer
+                dataUrl={dataUrl || undefined}
+                blobUrl={blobUrl || undefined}
+                fileName={attachment.fileName}
+                zoom={zoom}
+                rotation={rotation}
+                onDownload={handleDownload}
+              />
+            </div>
+          ) : isImage && (dataUrl || blobUrl) ? (
+            /* High-Fidelity Image Viewer with Pan & Zoom */
+            <div className="w-full h-full flex items-center justify-center overflow-auto p-2">
               <img
-                src={blobUrl}
+                src={dataUrl || blobUrl || ''}
                 alt={attachment.fileName}
                 style={{
                   transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
@@ -276,59 +329,26 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
                   maxHeight: '100%',
                   maxWidth: '100%',
                 }}
-                className="object-contain rounded-lg shadow-md border border-[#c6c6cd]/50 bg-white"
+                className="object-contain rounded-xl shadow-lg border border-[#c6c6cd]/50 bg-white"
+                onError={() => {
+                  setError('Format gambar tidak dapat ditampilkan secara langsung.');
+                }}
               />
             </div>
-          ) : isPdf && blobUrl ? (
-            <div className="w-full h-full rounded-xl overflow-hidden bg-white shadow-md border border-[#c6c6cd]">
-              <object
-                data={blobUrl}
-                type="application/pdf"
-                className="w-full h-full"
-              >
-                <div className="p-8 text-center flex flex-col items-center justify-center h-full">
-                  <span className="material-symbols-outlined text-5xl text-rose-600 mb-2">
-                    picture_as_pdf
-                  </span>
-                  <h4 className="font-bold text-black text-base mb-1">Dokumen PDF Terbuka</h4>
-                  <p className="text-xs text-[#45464d] max-w-sm mb-4">
-                    Browser Anda tidak mendukung pratinjau PDF langsung. Anda dapat membuka atau mengunduhnya di bawah:
-                  </p>
-                  <div className="flex gap-2">
-                    <a
-                      href={blobUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 bg-[#006a61] text-white rounded-lg text-xs font-bold hover:bg-[#006a61]/90 flex items-center gap-1.5"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                      Buka di Tab Baru
-                    </a>
-                    <button
-                      type="button"
-                      onClick={handleDownload}
-                      className="px-4 py-2 border border-[#c6c6cd] rounded-lg text-xs font-bold hover:bg-[#f2f4f6] flex items-center gap-1.5"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">download</span>
-                      Unduh PDF
-                    </button>
-                  </div>
-                </div>
-              </object>
-            </div>
-          ) : blobUrl ? (
+          ) : (blobUrl || dataUrl) ? (
+            /* Document card for Word / Excel / Generic file */
             <div className="bg-white border border-[#c6c6cd] rounded-2xl p-8 max-w-md text-center shadow-lg">
-              <span className="material-symbols-outlined text-5xl text-[#006a61] mb-2">
+              <span className="material-symbols-outlined text-5xl text-[#006a61] mb-2 block">
                 insert_drive_file
               </span>
               <h4 className="font-bold text-black text-base mb-1">{attachment.fileName}</h4>
               <p className="text-xs text-[#45464d] mb-4">
-                Dokumen jenis ini siap diunduh dan dibuka dengan aplikasi pendukung.
+                Dokumen jenis ini siap diunduh dan dibuka langsung dengan aplikasi pendukung pada komputer atau gawai Anda.
               </p>
               <button
                 type="button"
                 onClick={handleDownload}
-                className="px-5 py-2.5 bg-[#006a61] text-white rounded-lg text-xs font-bold hover:bg-[#006a61]/90 flex items-center gap-1.5 mx-auto"
+                className="px-5 py-2.5 bg-[#006a61] text-white rounded-lg text-xs font-bold hover:bg-[#006a61]/90 flex items-center gap-1.5 mx-auto cursor-pointer shadow-xs"
               >
                 <span className="material-symbols-outlined text-[18px]">download</span>
                 Unduh Berkas ({attachment.fileSize || 'Unduh'})
@@ -344,8 +364,8 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
             </div>
           ) : (
             <div className="text-center text-[#76777d] py-12">
-              <span className="material-symbols-outlined text-4xl mb-2">drafts</span>
-              <p className="text-sm">Dokumen tidak dapat ditampilkan.</p>
+              <span className="material-symbols-outlined text-4xl mb-2 block">drafts</span>
+              <p className="text-sm font-semibold">Dokumen tidak dapat ditampilkan.</p>
             </div>
           )}
         </div>
@@ -353,13 +373,22 @@ export const ModalDokumenViewer: React.FC<ModalDokumenViewerProps> = ({
         {/* Footer info */}
         <div className="px-5 py-2.5 bg-[#f7f9fb] border-t border-[#eceef0] flex items-center justify-between text-[11px] text-[#76777d] shrink-0">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>
-              Penyimpanan Cloud Sekolah: <strong>{attachment.fileName}</strong>
+              Penyimpanan Cloud Sekolah: <strong>{attachment.fileName || 'Dokumen'}</strong>
             </span>
           </div>
           <div>
-            Diunggah: {attachment.uploadedAt ? new Date(attachment.uploadedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Baru saja'}
+            Diunggah:{' '}
+            {attachment.uploadedAt
+              ? new Date(attachment.uploadedAt).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : 'Baru saja'}
           </div>
         </div>
       </div>

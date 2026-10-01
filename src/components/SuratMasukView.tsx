@@ -399,6 +399,7 @@ export const SuratMasukView: React.FC<SuratMasukViewProps> = ({
                                   mimeType: (item.fileLampiran || '').endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
                                   driveWebViewLink: item.driveWebViewLink || item.driveAttachment?.webViewLink,
                                   uploadedAt: item.tglTerima,
+                                  suratNo: item.noAsal || item.noUrut,
                                 };
                                 setViewerDoc({
                                   attachment: docToView,
